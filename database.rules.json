@@ -1,0 +1,32 @@
+{
+  "rules": {
+    "liveLocations": {
+      "$busId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (root.child('users').child(auth.uid).child('role').val() === 'driver' && root.child('users').child(auth.uid).child('assignedBusId').val() === $busId))",
+        ".validate": "newData.hasChildren(['lat', 'lng', 'timestamp'])",
+        "lat": {
+          ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+        },
+        "lng": {
+          ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+        },
+        "speed": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "heading": {
+          ".validate": "newData.isNumber()"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "presence": {
+      "$userId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $userId"
+      }
+    }
+  }
+}

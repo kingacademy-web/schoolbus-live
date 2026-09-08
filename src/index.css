@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    font-family: 'Inter', 'Noto Sans Telugu', system-ui, -apple-system, sans-serif;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Ensure Leaflet controls do not interfere with our custom overlays */
+.leaflet-container {
+  font-family: 'Inter', 'Noto Sans Telugu', system-ui, sans-serif !important;
+  width: 100%;
+  height: 100%;
+}
+
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Custom animated radar pulse for school bus marker */
+@keyframes radar-pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.4); opacity: 0.2; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+.animate-radar {
+  animation: radar-pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#00236F"/>
+  <!-- Radar circles -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#FEA619" stroke-width="4" stroke-opacity="0.2" stroke-dasharray="16,16"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#FEA619" stroke-width="4" stroke-opacity="0.35"/>
+  <!-- Bus Body -->
+  <rect x="116" y="160" width="280" height="180" rx="36" fill="#FEA619"/>
+  <!-- Windshield -->
+  <rect x="138" y="180" width="236" height="74" rx="16" fill="#131B2E"/>
+  <line x1="256" y1="180" x2="256" y2="254" stroke="#FEA619" stroke-width="6"/>
+  <!-- Headlights -->
+  <circle cx="156" cy="296" r="14" fill="#FFFFFF"/>
+  <circle cx="356" cy="296" r="14" fill="#FFFFFF"/>
+  <!-- Radiator Grill -->
+  <rect x="200" y="286" width="112" height="20" rx="8" fill="#684000"/>
+  <!-- Wheels -->
+  <rect x="140" y="336" width="50" height="28" rx="8" fill="#131B2E"/>
+  <rect x="322" y="336" width="50" height="28" rx="8" fill="#131B2E"/>
+  <!-- Signal beacon -->
+  <circle cx="256" cy="120" r="16" fill="#004A31"/>
+  <circle cx="256" cy="120" r="26" fill="none" stroke="#4EDEA3" stroke-width="5"/>
+</svg>

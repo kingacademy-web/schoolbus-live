@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && (
+        getUserData().role == role ||
+        request.auth.token.role == role
+      );
+    }
+    
+    function isAdmin() {
+      return hasRole('admin') || hasRole('super_admin');
+    }
+    
+    function isDriver() {
+      return hasRole('driver');
+    }
+    
+    function isParent() {
+      return hasRole('parent');
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+      allow update: if isAuthenticated() && request.auth.uid == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'schoolId', 'assignedBusId']);
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      // Parents can read only their children; drivers can read students on their assigned route; admins can read all
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isParent() && resource.data.parentId == request.auth.uid) ||
+        isDriver()
+      );
+      allow create, delete: if isAdmin();
+      // Drivers can update student boarding status (Boarded, Absent, Dropped)
+      allow update: if isAdmin() || (
+        isDriver() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'lastUpdatedBy'])
+      );
+    }
+
+    // Buses collection
+    match /buses/{busId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      allow update: if isAdmin() || (
+        isDriver() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastUpdated'])
+      );
+    }
+
+    // Routes collection
+    match /routes/{routeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Trips collection
+    match /trips/{tripId} {
+      allow read: if isAuthenticated();
+      allow create: if isDriver() || isAdmin();
+      allow update: if isAdmin() || (
+        isDriver() && (
+          resource.data.driverId == request.auth.uid ||
+          request.resource.data.driverId == request.auth.uid
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Emergency Alerts collection
+    match /emergencyAlerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isDriver() || isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Audit Logs collection
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable audit log
+    }
+
+    // Settings collection
+    match /settings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

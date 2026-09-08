@@ -1,0 +1,6 @@
+{
+  "name": "SchoolBus Live",
+  "description": "Realtime School Bus Live GPS Tracking & Telematics for Parents, Drivers, and Administrators with English and Telugu bilingual support.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
