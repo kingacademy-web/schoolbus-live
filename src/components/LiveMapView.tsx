@@ -76,13 +76,14 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
 
       mapInstanceRef.current = map;
 
-      // 1. School Campus Destination Marker (DPS Hyderabad)
+      // 1. School Campus Destination Marker (Sri Chaitanya School)
+      const campusLabel = lang === 'te' ? store.schoolInfo.nameTe : store.schoolInfo.name;
       const schoolIcon = L.divIcon({
         className: 'custom-school-marker',
         html: `
           <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -100%);">
             <div style="background:white; color:#00236F; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius:12px; padding:4px 8px; font-size:11px; font-weight:bold; display:flex; align-items:center; gap:4px; border:1px solid #E2E7FF; white-space:nowrap;">
-              <span>🏫 DPS Campus</span>
+              <span>🏫 ${campusLabel}</span>
             </div>
             <div style="width:30px; height:30px; background:#00236F; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.25); margin-top:2px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
@@ -512,13 +513,13 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         <div className="grid grid-cols-2 gap-2 pt-0.5">
           {/* Call Transport Office Desk */}
           <a
-            href="tel:+914023456789"
+            href={`tel:${store.schoolInfo.phone}`}
             className="h-12 rounded-xl bg-[#EAEDFF] text-[#00236F] font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform border border-[#C5C5D3]/40"
           >
             <Headphones className="w-4 h-4 text-[#00236F]" />
             <div className="flex flex-col text-left leading-tight">
               <span>{getTranslation(lang, 'transportDesk')}</span>
-              <span className="text-[9px] font-normal text-[#444651]">24/7 Office</span>
+              <span className="text-[9px] font-bold text-[#00236F]">{store.schoolInfo.phone}</span>
             </div>
           </a>
 

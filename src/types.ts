@@ -248,5 +248,6 @@ export interface SchoolInfo {
   email: string;
   emergencyContact: string;
   transportHeadName: string;
+  logoUrl?: string;
 }
 

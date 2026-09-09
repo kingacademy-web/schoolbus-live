@@ -125,10 +125,34 @@ class AppStore {
     if (typeof window !== 'undefined') {
       try {
         const savedSchool = localStorage.getItem('schoolbus_school_info');
-        if (savedSchool) this.schoolInfo = JSON.parse(savedSchool);
+        if (savedSchool) {
+          const parsed = JSON.parse(savedSchool);
+          if (parsed && (parsed.name?.includes('Delhi') || !parsed.name)) {
+            this.schoolInfo = { ...INITIAL_SCHOOL_INFO };
+            this.saveToStorage('schoolbus_school_info', this.schoolInfo);
+          } else {
+            this.schoolInfo = parsed;
+          }
+        } else {
+          this.schoolInfo = { ...INITIAL_SCHOOL_INFO };
+          this.saveToStorage('schoolbus_school_info', this.schoolInfo);
+        }
 
         const savedStudents = localStorage.getItem('schoolbus_students');
-        if (savedStudents) this.students = JSON.parse(savedStudents);
+        if (savedStudents) {
+          const parsedStudents = JSON.parse(savedStudents);
+          this.students = parsedStudents.map((s: Student) => {
+            if (s.schoolName?.includes('Delhi') || !s.schoolName) {
+              return {
+                ...s,
+                schoolName: INITIAL_SCHOOL_INFO.name,
+                schoolNameTe: INITIAL_SCHOOL_INFO.nameTe,
+              };
+            }
+            return s;
+          });
+          this.saveToStorage('schoolbus_students', this.students);
+        }
 
         const savedBuses = localStorage.getItem('schoolbus_buses');
         if (savedBuses) this.buses = JSON.parse(savedBuses);
@@ -140,7 +164,20 @@ class AppStore {
         if (savedPickups) this.pickupPoints = JSON.parse(savedPickups);
 
         const savedStops = localStorage.getItem('schoolbus_route_stops');
-        if (savedStops) this.routeStops = JSON.parse(savedStops);
+        if (savedStops) {
+          const parsedStops = JSON.parse(savedStops);
+          this.routeStops = parsedStops.map((st: RouteStop) => {
+            if (st.id === 'stop_school' || st.stopName?.includes('DPS')) {
+              return {
+                ...st,
+                stopName: 'School Campus (Sri Chaitanya)',
+                stopNameTe: 'పాఠశాల క్యాంపస్ (శ్రీ చైతన్య)',
+              };
+            }
+            return st;
+          });
+          this.saveToStorage('schoolbus_route_stops', this.routeStops);
+        }
       } catch (e) {
         console.warn('Error reading persisted data from localStorage:', e);
       }

@@ -344,7 +344,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         <p className="text-[11px] text-[#444651] leading-relaxed">
           {store.gpsMode === 'LIVE'
             ? 'Using real hardware navigator.geolocation.watchPosition with high accuracy, adaptive throttling (3s/5s/10s), and Firebase Realtime Database.'
-            : 'Using animated demo simulation along Miyapur to DPS corridor for testing without real road movement.'}
+            : 'Using animated demo simulation along Ghanpur route to Sri Chaitanya School campus for testing without real road movement.'}
         </p>
 
         <div className="grid grid-cols-2 gap-2">
@@ -429,7 +429,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       </div>
 
       {/* School Transport Help Contact Info */}
-      <div className="bg-[#F2F3FF] rounded-2xl p-4 border border-[#E2E7FF] space-y-2.5">
+      <div className="bg-[#F2F3FF] rounded-2xl p-4 border border-[#E2E7FF] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Headphones className="w-4 h-4 text-[#00236F]" />
@@ -447,13 +447,26 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2 text-xs text-[#444651]">
-          <div className="flex items-center gap-2">
-            <Building className="w-3.5 h-3.5 text-[#00236F] shrink-0" />
-            <span className="font-bold text-[#131B2E]">
+        {/* School Logo & Brand Banner */}
+        <div className="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-[#E2E7FF]">
+          <div className="w-13 h-13 rounded-xl bg-white shrink-0 overflow-hidden border border-[#E2E7FF] p-1 flex items-center justify-center shadow-2xs">
+            <img
+              src="./school-logo.png"
+              alt={store.schoolInfo.name}
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-extrabold text-sm text-[#131B2E] truncate">
               {lang === 'te' ? store.schoolInfo.nameTe : store.schoolInfo.name}
             </span>
+            <span className="text-[11px] text-[#444651] line-clamp-2 leading-tight">
+              {lang === 'te' ? store.schoolInfo.addressTe : store.schoolInfo.address}
+            </span>
           </div>
+        </div>
+
+        <div className="space-y-2 text-xs text-[#444651]">
           <div className="flex items-center gap-2">
             <Phone className="w-3.5 h-3.5 text-[#00236F] shrink-0" />
             <a href={`tel:${store.schoolInfo.phone}`} className="font-bold text-[#00236F] hover:underline">
@@ -473,12 +486,6 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
             <a href={`mailto:${store.schoolInfo.email}`} className="text-[#00236F] hover:underline truncate">
               {store.schoolInfo.email}
             </a>
-          </div>
-          <div className="flex items-start gap-2">
-            <MapPin className="w-3.5 h-3.5 text-[#00236F] shrink-0 mt-0.5" />
-            <span className="leading-snug">
-              {lang === 'te' ? store.schoolInfo.addressTe : store.schoolInfo.address}
-            </span>
           </div>
         </div>
       </div>
@@ -559,7 +566,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                   required
                   value={formSchoolName}
                   onChange={(e) => setFormSchoolName(e.target.value)}
-                  placeholder="e.g. Delhi Public School, Hyderabad"
+                  placeholder="e.g. Sri Chaitanya School"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                 />
               </div>
@@ -573,7 +580,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                   required
                   value={formSchoolNameTe}
                   onChange={(e) => setFormSchoolNameTe(e.target.value)}
-                  placeholder="ఉదా: ఢిల్లీ పబ్లిక్ స్కూల్, హైదరాబాద్"
+                  placeholder="ఉదా: శ్రీ చైతన్య స్కూల్"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                 />
               </div>
@@ -586,7 +593,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                   type="text"
                   value={formSchoolAddress}
                   onChange={(e) => setFormSchoolAddress(e.target.value)}
-                  placeholder="Street, Landmark, City, Pincode"
+                  placeholder="Ghanpur (Stn), Jangaon, TG - 506143"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                 />
               </div>
@@ -599,7 +606,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                   type="text"
                   value={formSchoolAddressTe}
                   onChange={(e) => setFormSchoolAddressTe(e.target.value)}
-                  placeholder="వీధి, ప్రాంతం, నగరం, పిన్‌కోడ్"
+                  placeholder="స్టేషన్ ఘన్‌పూర్, జనగాం, తెలంగాణ - 506143"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                 />
               </div>
@@ -614,7 +621,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                     required
                     value={formSchoolPhone}
                     onChange={(e) => setFormSchoolPhone(e.target.value)}
-                    placeholder="+91 40 2988 1234"
+                    placeholder="+91 99510 44459"
                     className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                   />
                 </div>
@@ -627,7 +634,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
                     required
                     value={formSchoolEmergency}
                     onChange={(e) => setFormSchoolEmergency(e.target.value)}
-                    placeholder="+91 94400 11223"
+                    placeholder="+91 99510 44469"
                     className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                   />
                 </div>

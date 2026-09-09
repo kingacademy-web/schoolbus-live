@@ -36,10 +36,10 @@ const DEMO_ACCOUNTS: Record<string, UserAccount> = {
   },
   'admin@schoolbus.live': {
     id: 'user_admin_01',
-    name: 'DPS Transport Administrator',
-    nameTe: 'డిపిఎస్ రవాణా నిర్వాహకులు',
+    name: 'Sri Chaitanya Administrator',
+    nameTe: 'శ్రీ చైతన్య రవాణా నిర్వాహకులు',
     email: 'admin@schoolbus.live',
-    phone: '+91 40 2345 6789',
+    phone: '+91 99510 44459',
     role: 'ADMIN',
     language: 'en',
     status: 'active',

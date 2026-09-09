@@ -680,11 +680,11 @@ export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
 
             <div className="flex flex-col gap-2 pt-1">
               <a
-                href="tel:+914023456789"
+                href={`tel:${store.schoolInfo.phone}`}
                 className="w-full h-12 bg-[#00236F] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-md transition-colors"
               >
                 <PhoneCall className="w-4 h-4" />
-                <span>Call School Transport Coordinator</span>
+                <span>{lang === 'te' ? 'స్కూల్ రవాణా విభాగానికి కాల్ చేయండి' : 'Call School Transport Coordinator'} ({store.schoolInfo.phone})</span>
               </a>
               <button
                 type="button"

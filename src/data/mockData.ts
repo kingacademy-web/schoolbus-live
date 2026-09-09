@@ -1,14 +1,15 @@
 import { Bus, Driver, NotificationItem, PickupPoint, RouteStop, Student, SchoolInfo } from '../types';
 
 export const INITIAL_SCHOOL_INFO: SchoolInfo = {
-  name: 'Delhi Public School, Hyderabad',
-  nameTe: 'డిల్లీ పబ్లిక్ స్కూల్, హైదరాబాద్',
-  address: 'Survey No. 224, Bandlaguda Jagir, Hyderabad, Telangana 500086',
-  addressTe: 'సర్వే నెం. 224, బండ్లగూడ జాగీర్, హైదరాబాద్, తెలంగాణ 500086',
-  phone: '+91 40 2988 1234',
-  email: 'transport.admin@dpshyderabad.edu.in',
-  emergencyContact: '+91 94400 11223',
-  transportHeadName: 'M. V. Rao',
+  name: 'Sri Chaitanya School',
+  nameTe: 'శ్రీ చైతన్య స్కూల్',
+  address: 'Ghanpur (Stn), Jangaon, TG - 506143',
+  addressTe: 'స్టేషన్ ఘన్‌పూర్, జనగాం జిల్లా, తెలంగాణ - 506143',
+  phone: '+91 99510 44459',
+  email: 'srichaitanya.ghanpur@gmail.com',
+  emergencyContact: '+91 99510 44469',
+  transportHeadName: 'Transport Incharge',
+  logoUrl: './school-logo.png',
 };
 
 export const INITIAL_STUDENTS: Student[] = [
@@ -19,8 +20,8 @@ export const INITIAL_STUDENTS: Student[] = [
     class: '1st Class',
     section: 'Section A',
     rollNo: '14',
-    schoolName: 'Delhi Public School, Hyderabad',
-    schoolNameTe: 'డిల్లీ పబ్లిక్ స్కూల్, హైదరాబాద్',
+    schoolName: 'Sri Chaitanya School',
+    schoolNameTe: 'శ్రీ చైతన్య స్కూల్',
     busId: 'bus_07',
     pickupPointId: 'pickup_main_rd',
     parentId: 'parent_sharma',
@@ -36,8 +37,8 @@ export const INITIAL_STUDENTS: Student[] = [
     class: 'Class 4',
     section: 'Section B',
     rollNo: '22',
-    schoolName: 'Delhi Public School, Hyderabad',
-    schoolNameTe: 'డిల్లీ పబ్లిక్ స్కూల్, హైదరాబాద్',
+    schoolName: 'Sri Chaitanya School',
+    schoolNameTe: 'శ్రీ చైతన్య స్కూల్',
     busId: 'bus_07',
     pickupPointId: 'pickup_allwyn',
     parentId: 'parent_sharma',
@@ -206,8 +207,8 @@ export const INITIAL_BUSES: Bus[] = [
 export const INITIAL_ROUTE_STOPS: RouteStop[] = [
   {
     id: 'stop_school',
-    stopName: 'School Campus (DPS)',
-    stopNameTe: 'పాఠశాల క్యాంపస్ (డిపిఎస్)',
+    stopName: 'School Campus (Sri Chaitanya)',
+    stopNameTe: 'పాఠశాల క్యాంపస్ (శ్రీ చైతన్య)',
     time: '07:15 AM',
     passed: true,
   },

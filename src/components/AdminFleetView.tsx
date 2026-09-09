@@ -179,8 +179,8 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
       class: newStudentClass,
       section: 'A',
       rollNo: '28',
-      schoolName: 'Delhi Public School, Hyderabad',
-      schoolNameTe: 'డిల్లీ పబ్లిక్ స్కూల్, హైదరాబాద్',
+      schoolName: store.schoolInfo.name,
+      schoolNameTe: store.schoolInfo.nameTe,
       busId: 'bus_07',
       pickupPointId: 'pickup_main_rd',
       parentId: 'parent_new',
@@ -1045,7 +1045,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                     required
                     value={formSchoolName}
                     onChange={(e) => setFormSchoolName(e.target.value)}
-                    placeholder="e.g. Delhi Public School"
+                    placeholder="e.g. Sri Chaitanya School"
                     className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                   />
                 </div>
@@ -1057,7 +1057,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                     type="text"
                     value={formSchoolNameTe}
                     onChange={(e) => setFormSchoolNameTe(e.target.value)}
-                    placeholder="ఉదా: డిల్లీ పబ్లిక్ స్కూల్"
+                    placeholder="ఉదా: శ్రీ చైతన్య స్కూల్"
                     className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                   />
                 </div>

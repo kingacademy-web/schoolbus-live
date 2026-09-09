@@ -49,19 +49,26 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="fixed top-0 left-0 right-0 z-40 bg-[#FAF8FF]/95 backdrop-blur-xl border-b border-[#E2E7FF] shadow-xs">
       <div className="max-w-7xl mx-auto px-4 h-18 flex items-center justify-between gap-2">
         {/* Logo & School Branding */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#00236F] text-white flex items-center justify-center shadow-sm shrink-0">
-            <BusIcon className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-11 h-11 rounded-xl bg-white shadow-xs shrink-0 overflow-hidden border border-[#E2E7FF] p-0.5 flex items-center justify-center">
+            <img
+              src="./school-logo.png"
+              alt={store.schoolInfo.name}
+              className="w-full h-full object-contain rounded-lg"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
           </div>
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight text-[#131B2E] truncate">
-                {getTranslation(lang, 'appName')}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#131B2E] truncate">
+                {lang === 'te' ? store.schoolInfo.nameTe : store.schoolInfo.name}
               </span>
               <button
                 type="button"
                 onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-                className="inline-flex items-center gap-1 bg-[#EAEDFF] hover:bg-[#DAE2FD] px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-[#4059AA] transition-colors"
+                className="inline-flex items-center gap-1 bg-[#EAEDFF] hover:bg-[#DAE2FD] px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#4059AA] transition-colors shrink-0"
                 title="Click to switch role"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FEA619] animate-pulse" />
@@ -87,8 +94,8 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>{gpsMode === 'LIVE' ? 'LIVE GPS' : 'DEMO'}</span>
               </button>
             </div>
-            <span className="text-[11px] text-[#444651] leading-none truncate">
-              {getTranslation(lang, 'appSubtitle')}
+            <span className="text-[10px] sm:text-[11px] text-[#444651] leading-none truncate">
+              {lang === 'te' ? 'ఘన్‌పూర్ (స్టేషన్) • లైవ్ బస్ ట్రాకింగ్' : 'Ghanpur (Stn), Jangaon • Live GPS'}
             </span>
           </div>
         </div>
