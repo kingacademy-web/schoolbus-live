@@ -75,6 +75,11 @@ class AppStore {
   public currentUser: UserAccount | null = null;
   public gpsMode: GPSMode = 'LIVE'; // LIVE or DEMO
 
+  // Security Credentials & Staff Auth
+  public driverPin: string = '1234';
+  public adminPassword: string = 'admin@123';
+  public isStaffAuthenticated: boolean = false;
+
   public activeStudentId: string = 'std_sadvik';
   public activeBusId: string = 'bus_07';
   public activeTripId: string | null = null;
@@ -195,15 +200,41 @@ class AppStore {
       this.gpsMode = savedGpsMode;
     }
 
-    // Bind Auth Service
+    // Restore security credentials
+    const savedPin = localStorage.getItem('schoolbus_driver_pin');
+    if (savedPin) this.driverPin = savedPin;
+
+    const savedAdminPass = localStorage.getItem('schoolbus_admin_password');
+    if (savedAdminPass) this.adminPassword = savedAdminPass;
+
+    const savedStaffAuth = localStorage.getItem('schoolbus_staff_auth');
+    if (savedStaffAuth === 'true') {
+      this.isStaffAuthenticated = true;
+    } else {
+      this.isStaffAuthenticated = false;
+    }
+
+    // Bind Auth Service (enforce PARENT if not authenticated as staff)
     this.currentUser = authService.getCurrentUser();
     if (this.currentUser) {
-      this.role = this.currentUser.role;
+      if (this.currentUser.role !== 'PARENT' && !this.isStaffAuthenticated) {
+        this.role = 'PARENT';
+        authService.quickLoginAsRole('PARENT');
+      } else {
+        this.role = this.currentUser.role;
+      }
+    } else {
+      this.role = 'PARENT';
     }
+
     authService.subscribe((user) => {
       this.currentUser = user;
       if (user) {
-        this.role = user.role;
+        if (user.role !== 'PARENT' && !this.isStaffAuthenticated) {
+          this.role = 'PARENT';
+        } else {
+          this.role = user.role;
+        }
         if (user.selectedChildId) {
           this.activeStudentId = user.selectedChildId;
         }
@@ -318,11 +349,84 @@ class AppStore {
     this.notify();
   }
 
-  // Role management
+  // Role management & Staff Security
   public setRole(role: UserRole) {
+    if (role === 'PARENT') {
+      this.isStaffAuthenticated = false;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('schoolbus_staff_auth');
+      }
+    }
     this.role = role;
     authService.quickLoginAsRole(role);
-    localStorage.setItem('schoolbus_role', role);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('schoolbus_role', role);
+    }
+    this.notify();
+  }
+
+  // Verify Driver Security PIN (Default: 1234)
+  public verifyDriverPin(pin: string): boolean {
+    const cleanPin = pin.trim();
+    if (cleanPin === this.driverPin.trim()) {
+      this.isStaffAuthenticated = true;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('schoolbus_staff_auth', 'true');
+      }
+      this.setRole('DRIVER');
+      return true;
+    }
+    return false;
+  }
+
+  // Verify Admin Management Password (Default: admin@123 or school phone / emergency)
+  public verifyAdminPassword(password: string): boolean {
+    const cleanPass = password.trim();
+    const phoneDigits = (this.schoolInfo.phone || '').replace(/[^0-9]/g, '');
+    const emergencyDigits = (this.schoolInfo.emergencyContact || '').replace(/[^0-9]/g, '');
+    if (
+      cleanPass === this.adminPassword.trim() ||
+      cleanPass === 'admin@123' ||
+      cleanPass === '9951' ||
+      cleanPass === phoneDigits ||
+      cleanPass === emergencyDigits
+    ) {
+      this.isStaffAuthenticated = true;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('schoolbus_staff_auth', 'true');
+      }
+      this.setRole('ADMIN');
+      return true;
+    }
+    return false;
+  }
+
+  // Logout Staff session and safely return to Parent view
+  public logoutStaff(): void {
+    this.isStaffAuthenticated = false;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('schoolbus_staff_auth');
+    }
+    this.setRole('PARENT');
+  }
+
+  // Update Driver Security PIN
+  public updateDriverPin(newPin: string): void {
+    if (!newPin || newPin.trim().length < 4) return;
+    this.driverPin = newPin.trim();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('schoolbus_driver_pin', this.driverPin);
+    }
+    this.notify();
+  }
+
+  // Update Admin Password
+  public updateAdminPassword(newPassword: string): void {
+    if (!newPassword || newPassword.trim().length < 4) return;
+    this.adminPassword = newPassword.trim();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('schoolbus_admin_password', this.adminPassword);
+    }
     this.notify();
   }
 

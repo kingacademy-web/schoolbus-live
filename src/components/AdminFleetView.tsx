@@ -20,6 +20,7 @@ import {
   Sparkles,
   Pencil,
   Save,
+  LogOut,
 } from 'lucide-react';
 import { store } from '../services/store';
 import { Bus, Language, Student } from '../types';
@@ -262,14 +263,25 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenSchoolModal}
-            className="flex items-center gap-1.5 bg-[#EAEDFF] hover:bg-[#DAE2FD] text-[#00236F] px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 border border-[#00236F]/20 active:scale-95 shadow-2xs"
-          >
-            <Pencil className="w-3.5 h-3.5 text-[#00236F]" />
-            <span>{lang === 'te' ? 'ఎడిట్' : 'Edit'}</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleOpenSchoolModal}
+              className="flex items-center gap-1.5 bg-[#EAEDFF] hover:bg-[#DAE2FD] text-[#00236F] px-3 py-1.5 rounded-full text-xs font-bold transition-all border border-[#00236F]/20 active:scale-95 shadow-2xs cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5 text-[#00236F]" />
+              <span>{lang === 'te' ? 'ఎడిట్' : 'Edit'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => store.logoutStaff()}
+              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-full text-xs font-bold transition-all border border-red-200 active:scale-95 shadow-2xs cursor-pointer"
+              title={lang === 'te' ? 'లాగ్ అవుట్' : 'Exit Admin Fleet'}
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-700" />
+              <span>{lang === 'te' ? 'నిష్క్రమించు' : 'Exit'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Fleet Command Headline & Quick Language State Indicator */}

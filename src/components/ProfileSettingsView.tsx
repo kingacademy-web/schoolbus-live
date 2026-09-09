@@ -21,6 +21,8 @@ import {
   CheckCircle,
   Building,
   MapPin,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
 import { store } from '../services/store';
 import { Language, UserRole } from '../types';
@@ -30,12 +32,16 @@ interface ProfileSettingsViewProps {
   lang: Language;
   role: UserRole;
   onSelectRole: (newRole: UserRole) => void;
+  onOpenStaffAuth?: (initialRole?: 'DRIVER' | 'ADMIN') => void;
+  onLogout?: () => void;
 }
 
 export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   lang,
   role,
   onSelectRole,
+  onOpenStaffAuth,
+  onLogout,
 }) => {
   const [prefGeofence, setPrefGeofence] = useState(true);
   const [prefStarted, setPrefStarted] = useState(true);
@@ -53,6 +59,11 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const [formSchoolEmergency, setFormSchoolEmergency] = useState(store.schoolInfo.emergencyContact);
   const [formSchoolEmail, setFormSchoolEmail] = useState(store.schoolInfo.email);
   const [formSchoolHead, setFormSchoolHead] = useState(store.schoolInfo.transportHeadName);
+
+  // Admin Credential Management state
+  const [editingCredentials, setEditingCredentials] = useState(false);
+  const [newDriverPin, setNewDriverPin] = useState(store.driverPin);
+  const [newAdminPass, setNewAdminPass] = useState(store.adminPassword);
 
   const student = store.getStudent();
   const students = store.students;
@@ -249,76 +260,194 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Role Switcher Section */}
+      {/* Staff & Driver Security Access Section */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E7FF] space-y-3">
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4 text-[#00236F]" />
-          <h3 className="text-xs font-bold text-[#131B2E]">
-            {getTranslation(lang, 'switchRole')}
-          </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-[#00236F]" />
+            <h3 className="text-xs font-bold text-[#131B2E]">
+              {role === 'PARENT'
+                ? getTranslation(lang, 'staffSectionTitle')
+                : getTranslation(lang, 'activeStaffSession')}
+            </h3>
+          </div>
+          {role !== 'PARENT' && (
+            <span className="bg-[#FFDDB8] text-[#2A1700] text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+              {role} SESSION
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => onSelectRole('PARENT')}
-            className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
-              role === 'PARENT'
-                ? 'bg-[#EAEDFF] border-[#00236F] text-[#00236F] font-bold'
-                : 'bg-[#F2F3FF] border-[#E2E7FF] text-[#131B2E]'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm">👨‍👩‍👦</span>
-              <span className="text-xs">{getTranslation(lang, 'loginAsParent')}</span>
-            </div>
-            {role === 'PARENT' ? (
-              <Check className="w-4 h-4 text-[#00236F]" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-[#757682]" />
-            )}
-          </button>
+        {role === 'PARENT' ? (
+          <div className="flex flex-col gap-2.5">
+            <p className="text-[11px] text-[#444651] leading-relaxed">
+              {getTranslation(lang, 'staffSectionDesc')}
+            </p>
 
-          <button
-            type="button"
-            onClick={() => onSelectRole('DRIVER')}
-            className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
-              role === 'DRIVER'
-                ? 'bg-[#EAEDFF] border-[#00236F] text-[#00236F] font-bold'
-                : 'bg-[#F2F3FF] border-[#E2E7FF] text-[#131B2E]'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm">🚌</span>
-              <span className="text-xs">{getTranslation(lang, 'loginAsDriver')}</span>
-            </div>
-            {role === 'DRIVER' ? (
-              <Check className="w-4 h-4 text-[#00236F]" />
-            ) : (
+            <button
+              type="button"
+              onClick={() => onOpenStaffAuth?.('DRIVER')}
+              className="p-3 rounded-xl border border-[#E2E7FF] bg-[#F2F3FF] hover:bg-[#EAEDFF] flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#00236F] text-white flex items-center justify-center shrink-0">
+                  <BusIcon className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-[#131B2E] flex items-center gap-1.5">
+                    <span>{getTranslation(lang, 'accessDriverBtn')}</span>
+                    <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.2 rounded">PIN 🔒</span>
+                  </span>
+                  <span className="text-[10px] text-[#757682]">
+                    {lang === 'te' ? '4-అంకెల డ్రైవర్ సెక్యూరిటీ పిన్ అవసరం' : 'Requires 4-digit Driver PIN'}
+                  </span>
+                </div>
+              </div>
               <ChevronRight className="w-4 h-4 text-[#757682]" />
-            )}
-          </button>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => onSelectRole('ADMIN')}
-            className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${
-              role === 'ADMIN'
-                ? 'bg-[#EAEDFF] border-[#00236F] text-[#00236F] font-bold'
-                : 'bg-[#F2F3FF] border-[#E2E7FF] text-[#131B2E]'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm">🏫</span>
-              <span className="text-xs">{getTranslation(lang, 'loginAsAdmin')}</span>
-            </div>
-            {role === 'ADMIN' ? (
-              <Check className="w-4 h-4 text-[#00236F]" />
-            ) : (
+            <button
+              type="button"
+              onClick={() => onOpenStaffAuth?.('ADMIN')}
+              className="p-3 rounded-xl border border-[#E2E7FF] bg-[#F2F3FF] hover:bg-[#EAEDFF] flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#00236F] text-white flex items-center justify-center shrink-0">
+                  <School className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-[#131B2E] flex items-center gap-1.5">
+                    <span>{getTranslation(lang, 'accessAdminBtn')}</span>
+                    <span className="text-[9px] bg-indigo-100 text-indigo-900 font-bold px-1.5 py-0.2 rounded">PASS 🔒</span>
+                  </span>
+                  <span className="text-[10px] text-[#757682]">
+                    {lang === 'te' ? 'అడ్మిన్ నిర్వహణ పాస్‌వర్డ్ అవసరం' : 'Requires Admin Management Password'}
+                  </span>
+                </div>
+              </div>
               <ChevronRight className="w-4 h-4 text-[#757682]" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="p-3 rounded-xl bg-[#F2F3FF] border border-[#E2E7FF] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
+                  <CheckCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-[#131B2E]">
+                    {role === 'DRIVER'
+                      ? `${driver?.name || 'Ravi Kumar'} (Driver Console)`
+                      : `${store.schoolInfo.transportHeadName || 'Administrator'} (Fleet Admin)`}
+                  </span>
+                  <span className="text-[10px] text-emerald-800 font-medium">
+                    {lang === 'te' ? 'సిబ్బందిగా ధృవీకరించబడ్డారు' : 'Staff Authenticated & Verified'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (onLogout) {
+                  onLogout();
+                } else {
+                  store.logoutStaff();
+                }
+              }}
+              className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{getTranslation(lang, 'logoutReturnParent')}</span>
+            </button>
+
+            {/* Admin Credential Management (Only for Admin) */}
+            {role === 'ADMIN' && (
+              <div className="mt-2 pt-3 border-t border-[#E2E7FF]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-[#131B2E] flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-[#00236F]" />
+                    <span>{lang === 'te' ? 'పిన్ & పాస్‌వర్డ్ నిర్వహణ' : 'Manage Security Credentials'}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCredentials(!editingCredentials)}
+                    className="text-xs text-[#00236F] font-bold hover:underline"
+                  >
+                    {editingCredentials ? (lang === 'te' ? 'రద్దు' : 'Cancel') : (lang === 'te' ? 'మార్చు' : 'Change')}
+                  </button>
+                </div>
+
+                {editingCredentials ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (newDriverPin.trim().length >= 4) {
+                        store.updateDriverPin(newDriverPin.trim());
+                      }
+                      if (newAdminPass.trim().length >= 4) {
+                        store.updateAdminPassword(newAdminPass.trim());
+                      }
+                      setEditingCredentials(false);
+                      showToast(lang === 'te' ? 'పాస్‌వర్డ్‌లు విజయవంతంగా మార్చబడ్డాయి!' : 'Credentials updated successfully!');
+                    }}
+                    className="flex flex-col gap-2.5 bg-[#F2F3FF] p-3 rounded-xl border border-[#E2E7FF]"
+                  >
+                    <div>
+                      <label className="text-[10px] font-bold text-[#444651] block mb-1">
+                        {getTranslation(lang, 'changeDriverPinTitle')} (4 digits)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={newDriverPin}
+                        onChange={(e) => setNewDriverPin(e.target.value)}
+                        placeholder="1234"
+                        className="w-full bg-white border border-[#C5C5D3] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-[#444651] block mb-1">
+                        {getTranslation(lang, 'changeAdminPassTitle')}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={newAdminPass}
+                        onChange={(e) => setNewAdminPass(e.target.value)}
+                        placeholder="admin@123"
+                        className="w-full bg-white border border-[#C5C5D3] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="bg-[#00236F] text-white py-2 rounded-lg text-xs font-bold mt-1 shadow-xs hover:bg-[#001c59]"
+                    >
+                      {getTranslation(lang, 'updateCredentialsBtn')}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="text-[11px] text-[#757682] space-y-1 bg-[#F2F3FF] p-2.5 rounded-xl">
+                    <div className="flex justify-between">
+                      <span>Driver PIN:</span>
+                      <span className="font-mono font-bold text-[#131B2E]">{store.driverPin}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Admin Password:</span>
+                      <span className="font-mono font-bold text-[#131B2E]">••••••••</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* GPS Engine Mode (LIVE vs DEMO) */}

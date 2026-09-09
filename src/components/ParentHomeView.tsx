@@ -22,6 +22,7 @@ import {
   Upload,
   Save,
   CheckCircle,
+  Lock,
 } from 'lucide-react';
 import { store } from '../services/store';
 import { Language } from '../types';
@@ -30,13 +31,15 @@ import { getTranslation } from '../i18n/translations';
 interface ParentHomeViewProps {
   lang: Language;
   onNavigateToLive: () => void;
-  onNavigateToDriver: () => void;
+  onNavigateToDriver?: () => void;
+  onOpenStaffLogin?: () => void;
 }
 
 export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
   lang,
   onNavigateToLive,
   onNavigateToDriver,
+  onOpenStaffLogin,
 }) => {
   const [relayModalOpen, setRelayModalOpen] = useState(false);
   const [editStudentModalOpen, setEditStudentModalOpen] = useState(false);
@@ -615,18 +618,19 @@ export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
         <div className="grid grid-cols-2 gap-2 mt-0.5">
           <button
             type="button"
-            onClick={onNavigateToDriver}
-            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-xs border border-[#E2E7FF] text-left"
+            onClick={onOpenStaffLogin || onNavigateToDriver}
+            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-xs border border-[#E2E7FF] text-left cursor-pointer"
           >
             <div className="w-9 h-9 rounded-xl bg-[#EAEDFF] text-[#00236F] flex items-center justify-center shrink-0">
-              <SteeringWheel className="w-5 h-5" />
+              <Lock className="w-4 h-4" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-[#131B2E] truncate">
-                {getTranslation(lang, 'driverModeTitle')}
+              <span className="text-xs font-bold text-[#131B2E] truncate flex items-center gap-1">
+                <span>{lang === 'te' ? 'సిబ్బంది పోర్టల్' : 'Staff Portal'}</span>
+                <span className="text-[9px] text-amber-800 font-bold bg-amber-100 px-1 py-0.2 rounded">PIN</span>
               </span>
               <span className="text-[10px] text-[#444651] truncate">
-                {getTranslation(lang, 'terminalView')}
+                {lang === 'te' ? 'డ్రైవర్ / అడ్మిన్ లాగిన్' : 'Driver / Admin PIN'}
               </span>
             </div>
           </button>
@@ -634,7 +638,7 @@ export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
           <button
             type="button"
             onClick={() => setRelayModalOpen(true)}
-            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-xs border border-[#E2E7FF] text-left"
+            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-xs border border-[#E2E7FF] text-left cursor-pointer"
           >
             <div className="w-9 h-9 rounded-xl bg-[#FFDDB8] text-[#855300] flex items-center justify-center shrink-0">
               <Headphones className="w-5 h-5" />

@@ -9,6 +9,7 @@ import { DriverPortalView } from './components/DriverPortalView';
 import { AdminFleetView } from './components/AdminFleetView';
 import { AlertsView } from './components/AlertsView';
 import { ProfileSettingsView } from './components/ProfileSettingsView';
+import { StaffAuthModal } from './components/StaffAuthModal';
 import { AlertTriangle, WifiOff, X } from 'lucide-react';
 
 export default function App() {
@@ -16,6 +17,8 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [acknowledgedEmergency, setAcknowledgedEmergency] = useState(false);
+  const [staffAuthModalOpen, setStaffAuthModalOpen] = useState(false);
+  const [staffAuthTargetRole, setStaffAuthTargetRole] = useState<'DRIVER' | 'ADMIN'>('DRIVER');
 
   // Re-render when store updates
   useEffect(() => {
@@ -44,15 +47,42 @@ export default function App() {
     (n) => n.type === 'bus_stopped' || (n.titleEn && (n.titleEn.toLowerCase().includes('emergency') || n.titleEn.toLowerCase().includes('sos')))
   );
 
-  const handleSelectRole = (newRole: UserRole) => {
-    store.setRole(newRole);
-    if (newRole === 'DRIVER') {
+  const handleOpenStaffAuth = (targetRole: 'DRIVER' | 'ADMIN' = 'DRIVER') => {
+    setStaffAuthTargetRole(targetRole);
+    setStaffAuthModalOpen(true);
+  };
+
+  const handleStaffAuthSuccess = (authenticatedRole: 'DRIVER' | 'ADMIN') => {
+    if (authenticatedRole === 'DRIVER') {
       setCurrentTab('driver_portal');
-    } else if (newRole === 'ADMIN') {
+    } else if (authenticatedRole === 'ADMIN') {
       setCurrentTab('admin_fleet');
-    } else {
-      setCurrentTab('home');
     }
+  };
+
+  const handleLogout = () => {
+    store.logoutStaff();
+    setCurrentTab('home');
+  };
+
+  const handleSelectRole = (newRole: UserRole) => {
+    if (newRole === 'PARENT') {
+      handleLogout();
+    } else {
+      handleOpenStaffAuth(newRole);
+    }
+  };
+
+  const handleSelectTab = (tab: NavTab) => {
+    if (tab === 'driver_portal' && role !== 'DRIVER') {
+      handleOpenStaffAuth('DRIVER');
+      return;
+    }
+    if (tab === 'admin_fleet' && role !== 'ADMIN') {
+      handleOpenStaffAuth('ADMIN');
+      return;
+    }
+    setCurrentTab(tab);
   };
 
   return (
@@ -65,6 +95,7 @@ export default function App() {
         onOpenAlerts={() => setCurrentTab('alerts')}
         unreadCount={unreadAlerts}
         gpsMode={store.gpsMode}
+        onLogout={handleLogout}
       />
 
       {/* Offline Status Warning Ribbon */}
@@ -104,10 +135,7 @@ export default function App() {
           <ParentHomeView
             lang={lang}
             onNavigateToLive={() => setCurrentTab('live')}
-            onNavigateToDriver={() => {
-              store.setRole('DRIVER');
-              setCurrentTab('driver_portal');
-            }}
+            onOpenStaffLogin={() => handleOpenStaffAuth('DRIVER')}
           />
         )}
 
@@ -120,6 +148,8 @@ export default function App() {
             lang={lang}
             role={role}
             onSelectRole={handleSelectRole}
+            onOpenStaffAuth={(target) => handleOpenStaffAuth(target || 'DRIVER')}
+            onLogout={handleLogout}
           />
         )}
 
@@ -139,19 +169,20 @@ export default function App() {
       {/* Persistent Bottom Mobile Navigation Bar */}
       <BottomNav
         currentTab={currentTab}
-        onSelectTab={(tab) => {
-          if (tab === 'driver_portal' && role !== 'DRIVER') {
-            store.setRole('DRIVER');
-          } else if (tab === 'admin_fleet' && role !== 'ADMIN') {
-            store.setRole('ADMIN');
-          } else if ((tab === 'home' || tab === 'live') && role !== 'PARENT') {
-            store.setRole('PARENT');
-          }
-          setCurrentTab(tab);
-        }}
+        onSelectTab={handleSelectTab}
         lang={lang}
         role={role}
         unreadAlerts={unreadAlerts}
+        onLogout={handleLogout}
+      />
+
+      {/* Staff Authentication Modal (Driver PIN & Admin Password) */}
+      <StaffAuthModal
+        isOpen={staffAuthModalOpen}
+        onClose={() => setStaffAuthModalOpen(false)}
+        initialRole={staffAuthTargetRole}
+        lang={lang}
+        onSuccess={handleStaffAuthSuccess}
       />
     </div>
   );
