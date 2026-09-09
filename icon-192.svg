@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="42" fill="#00236F"/>
+  <!-- Glowing radar rings -->
+  <circle cx="96" cy="96" r="76" fill="none" stroke="#FEA619" stroke-width="2" stroke-opacity="0.25" stroke-dasharray="6,6"/>
+  <circle cx="96" cy="96" r="54" fill="none" stroke="#FEA619" stroke-width="2" stroke-opacity="0.4"/>
+  <!-- Bus Body -->
+  <rect x="44" y="60" width="104" height="66" rx="14" fill="#FEA619"/>
+  <!-- Bus Windshield -->
+  <rect x="52" y="68" width="88" height="26" rx="6" fill="#131B2E"/>
+  <line x1="96" y1="68" x2="96" y2="94" stroke="#FEA619" stroke-width="3"/>
+  <!-- Headlights -->
+  <circle cx="58" cy="110" r="5" fill="#FFFFFF"/>
+  <circle cx="134" cy="110" r="5" fill="#FFFFFF"/>
+  <!-- Grill -->
+  <rect x="74" y="106" width="44" height="8" rx="3" fill="#684000"/>
+  <!-- Wheels -->
+  <rect x="52" y="122" width="18" height="10" rx="3" fill="#131B2E"/>
+  <rect x="122" y="122" width="18" height="10" rx="3" fill="#131B2E"/>
+  <!-- Live Signal Beacon -->
+  <circle cx="96" cy="46" r="6" fill="#004A31"/>
+  <circle cx="96" cy="46" r="10" fill="none" stroke="#4EDEA3" stroke-width="2"/>
+</svg>

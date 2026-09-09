@@ -1,0 +1,25 @@
+{
+  "name": "SchoolBus Live",
+  "short_name": "Bus Live",
+  "description": "Realtime School Bus Live GPS Tracking & Telematics for Parents, Drivers, and Administrators",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF8FF",
+  "theme_color": "#00236F",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "navigation", "travel"]
+}
