@@ -30,7 +30,20 @@ import { liveLocationService } from './liveLocationService';
 import { tripService } from './tripService';
 import { auditService } from './auditService';
 import { authService } from './authService';
-import { isFirebaseConfigured } from './firebase';
+import { isFirebaseConfigured, rtdb } from './firebase';
+import { ref, onValue, set } from 'firebase/database';
+
+// Safe array/collection parser for Firebase Realtime Database
+function parseList<T>(val: any, fallback: T[]): T[] {
+  if (!val) return fallback;
+  if (Array.isArray(val)) {
+    return val.filter((item) => item !== null && item !== undefined);
+  }
+  if (typeof val === 'object') {
+    return Object.values(val).filter((item) => item !== null && item !== undefined) as T[];
+  }
+  return fallback;
+}
 
 // Haversine formula to compute accurate distance in kilometers
 export function calculateDistanceKm(
@@ -94,19 +107,22 @@ class AppStore {
 
   public liveLocation: LiveLocationData = {
     busId: 'bus_07',
-    lat: BUS_07_WAYPOINTS[1].lat,
-    lng: BUS_07_WAYPOINTS[1].lng,
-    speed: 26,
-    heading: 45,
-    accuracy: 3.5,
+    lat: 17.8580,
+    lng: 79.3175,
+    latitude: 17.8580,
+    longitude: 79.3175,
+    speed: 0,
+    heading: 0,
+    accuracy: 5.0,
     timestamp: Date.now(),
-    tripStatus: 'MORNING_TRIP',
+    tripStatus: 'COMPLETED',
+    status: 'STOPPED',
     driverId: 'drv_ravi',
-    locationName: BUS_07_WAYPOINTS[1].locationName,
-    locationNameTe: BUS_07_WAYPOINTS[1].locationNameTe,
-    distanceKm: BUS_07_WAYPOINTS[1].distanceKm,
-    etaMinutes: BUS_07_WAYPOINTS[1].etaMinutes,
-    isRealGps: false,
+    locationName: 'Sri Chaitanya School Campus, Station Ghanpur',
+    locationNameTe: 'శ్రీ చైతన్య స్కూల్ క్యాంపస్, స్టేషన్ ఘన్‌పూర్',
+    distanceKm: 0,
+    etaMinutes: 0,
+    isRealGps: true,
   };
 
   public isSimulating: boolean = false;
@@ -275,6 +291,9 @@ class AppStore {
 
     // Attach Realtime Live Location Subscriber if Parent / Admin
     this.initLiveLocationSubscription();
+
+    // Attach Cloud Realtime Database Sync
+    this.initCloudSync();
   }
 
   public subscribe(listener: () => void) {
@@ -343,6 +362,180 @@ class AppStore {
           this.notify();
         }
       );
+    }
+  }
+
+  // Two-way synchronization with Firebase Realtime Database
+  private initCloudSync() {
+    if (!isFirebaseConfigured || !rtdb) return;
+
+    try {
+      // 1. School Info
+      const schoolRef = ref(rtdb, 'fleet/schoolInfo');
+      onValue(schoolRef, (snap) => {
+        const val = snap.val();
+        if (val && val.name) {
+          this.schoolInfo = val;
+          this.saveToStorage();
+          this.notify();
+        }
+      });
+
+      // 2. Buses
+      const busesRef = ref(rtdb, 'fleet/buses');
+      onValue(busesRef, (snap) => {
+        const val = snap.val();
+        if (val) {
+          const parsed = parseList<Bus>(val, this.buses);
+          if (parsed.length > 0) {
+            this.buses = parsed;
+            this.saveToStorage();
+            this.notify();
+          }
+        }
+      });
+
+      // 3. Drivers
+      const driversRef = ref(rtdb, 'fleet/drivers');
+      onValue(driversRef, (snap) => {
+        const val = snap.val();
+        if (val) {
+          const parsed = parseList<Driver>(val, this.drivers);
+          if (parsed.length > 0) {
+            this.drivers = parsed;
+            this.saveToStorage();
+            this.notify();
+          }
+        }
+      });
+
+      // 4. Students
+      const studentsRef = ref(rtdb, 'fleet/students');
+      onValue(studentsRef, (snap) => {
+        const val = snap.val();
+        if (val) {
+          const parsed = parseList<Student>(val, this.students);
+          if (parsed.length > 0) {
+            this.students = parsed;
+            this.saveToStorage();
+            this.notify();
+          }
+        }
+      });
+
+      // 5. Pickup Points
+      const pickupsRef = ref(rtdb, 'fleet/pickupPoints');
+      onValue(pickupsRef, (snap) => {
+        const val = snap.val();
+        if (val) {
+          const parsed = parseList<PickupPoint>(val, this.pickupPoints);
+          if (parsed.length > 0) {
+            this.pickupPoints = parsed;
+            this.saveToStorage();
+            this.notify();
+          }
+        }
+      });
+
+      // 6. Route Stops
+      const stopsRef = ref(rtdb, 'fleet/routeStops');
+      onValue(stopsRef, (snap) => {
+        const val = snap.val();
+        if (val) {
+          const parsed = parseList<RouteStop>(val, this.routeStops);
+          if (parsed.length > 0) {
+            this.routeStops = parsed;
+            this.saveToStorage();
+            this.notify();
+          }
+        }
+      });
+
+      // 7. Notifications
+      const notifsRef = ref(rtdb, 'fleet/notifications');
+      onValue(notifsRef, (snap) => {
+        const val = snap.val();
+        if (val) {
+          const parsed = parseList<NotificationItem>(val, this.notifications);
+          if (parsed.length > 0) {
+            this.notifications = parsed;
+            this.notify();
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Firebase RTDB sync error:', e);
+    }
+  }
+
+  // Push helpers to update Firebase RTDB in real time
+  public async syncSchoolInfoToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/schoolInfo'), this.schoolInfo);
+      } catch (e) {
+        console.warn('Failed to sync schoolInfo to cloud:', e);
+      }
+    }
+  }
+
+  public async syncStudentsToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/students'), this.students);
+      } catch (e) {
+        console.warn('Failed to sync students to cloud:', e);
+      }
+    }
+  }
+
+  public async syncBusesToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/buses'), this.buses);
+      } catch (e) {
+        console.warn('Failed to sync buses to cloud:', e);
+      }
+    }
+  }
+
+  public async syncDriversToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/drivers'), this.drivers);
+      } catch (e) {
+        console.warn('Failed to sync drivers to cloud:', e);
+      }
+    }
+  }
+
+  public async syncPickupPointsToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/pickupPoints'), this.pickupPoints);
+      } catch (e) {
+        console.warn('Failed to sync pickupPoints to cloud:', e);
+      }
+    }
+  }
+
+  public async syncRouteStopsToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/routeStops'), this.routeStops);
+      } catch (e) {
+        console.warn('Failed to sync routeStops to cloud:', e);
+      }
+    }
+  }
+
+  public async syncNotificationsToCloud() {
+    if (isFirebaseConfigured && rtdb) {
+      try {
+        await set(ref(rtdb, 'fleet/notifications'), this.notifications);
+      } catch (e) {
+        console.warn('Failed to sync notifications to cloud:', e);
+      }
     }
   }
 
@@ -492,6 +685,8 @@ class AppStore {
       });
     }
 
+    this.saveToStorage();
+    this.syncStudentsToCloud();
     this.notify();
   }
 
@@ -549,12 +744,15 @@ class AppStore {
     this.activeTripId = trip.id;
 
     this.buses = this.buses.map((b) =>
-      b.id === this.activeBusId ? { ...b, status, speedKmh: 26 } : b
+      b.id === this.activeBusId ? { ...b, status, speedKmh: 24 } : b
     );
+    this.saveToStorage();
+    this.syncBusesToCloud();
 
     this.liveLocation = {
       ...this.liveLocation,
       tripStatus: status,
+      status: status,
       tripId: trip.id,
       timestamp: Date.now(),
     };
@@ -562,20 +760,15 @@ class AppStore {
     this.tripElapsedSeconds = 0;
     this.startTripTimer();
 
-    // If LIVE mode, activate real hardware GPS
-    if (this.gpsMode === 'LIVE') {
-      this.startHardwareGps();
-    } else {
-      // Demo mode
-      this.startSimulation();
-    }
+    // Always start real mobile GPS tracking for authentic live data
+    this.startHardwareGps();
 
     this.addNotification({
       type: 'bus_started',
       titleEn: tripType === 'morning' ? 'Morning Trip Started' : 'Return Trip Started',
       titleTe: tripType === 'morning' ? 'ఉదయం ప్రయాణం ప్రారంభమైంది' : 'తిరుగు ప్రయాణం ప్రారంభమైంది',
-      messageEn: `Bus-07 driver has started the ${tripType} trip. Live GPS location is broadcasting.`,
-      messageTe: `బస్సు-07 డ్రైవర్ ట్రిప్ ప్రారంభించారు. లైవ్ లొకేషన్ ప్రసారం ప్రారంభమైంది.`,
+      messageEn: `Bus-07 driver has started the ${tripType} trip. Live GPS location is broadcasting to parents.`,
+      messageTe: `బస్సు-07 డ్రైవర్ ట్రిప్ ప్రారంభించారు. లైవ్ లొకేషన్ క్లౌడ్ ద్వారా ప్రసారం అవుతోంది.`,
       busId: this.activeBusId,
     });
 
@@ -585,14 +778,27 @@ class AppStore {
 
   public async stopTrip() {
     this.buses = this.buses.map((b) =>
-      b.id === this.activeBusId ? { ...b, status: 'COMPLETED', speedKmh: 0 } : b
+      b.id === this.activeBusId
+        ? {
+            ...b,
+            status: 'COMPLETED',
+            speedKmh: 0,
+            currentLocationName: 'Sri Chaitanya School Campus Depot',
+            currentLocationNameTe: 'శ్రీ చైతన్య స్కూల్ క్యాంపస్ డిపో',
+          }
+        : b
     );
+    this.saveToStorage();
+    this.syncBusesToCloud();
 
     this.liveLocation = {
       ...this.liveLocation,
       tripStatus: 'COMPLETED',
+      status: 'STOPPED',
       speed: 0,
       timestamp: Date.now(),
+      locationName: 'Sri Chaitanya School Campus, Station Ghanpur',
+      locationNameTe: 'శ్రీ చైతన్య స్కూల్ క్యాంపస్, స్టేషన్ ఘన్‌పూర్',
     };
 
     if (this.tripTimer) {
@@ -607,6 +813,29 @@ class AppStore {
     this.stopHardwareGps();
     this.isSimulating = false;
     if (this.simInterval) clearInterval(this.simInterval);
+
+    // Update RTDB liveLocation to parked campus
+    if (isFirebaseConfigured && rtdb && this.activeBusId) {
+      try {
+        await set(ref(rtdb, `liveLocations/${this.activeBusId}`), {
+          latitude: 17.8580,
+          longitude: 79.3175,
+          speed: 0,
+          heading: 0,
+          accuracy: 5,
+          timestamp: Date.now(),
+          driverId: this.liveLocation.driverId || 'drv_ravi',
+          status: 'STOPPED',
+          tripStatus: 'COMPLETED',
+          locationName: 'Sri Chaitanya School Campus, Station Ghanpur',
+          locationNameTe: 'శ్రీ చైతన్య స్కూల్ క్యాంపస్, స్టేషన్ ఘన్‌పూర్',
+          distanceKm: 0,
+          etaMinutes: 0,
+        });
+      } catch (err) {
+        console.warn('Error setting stopped status in RTDB:', err);
+      }
+    }
 
     this.addNotification({
       type: 'trip_completed',
@@ -629,6 +858,8 @@ class AppStore {
     this.buses = this.buses.map((b) =>
       b.id === this.activeBusId ? { ...b, status: 'EMERGENCY' } : b
     );
+    this.saveToStorage();
+    this.syncBusesToCloud();
 
     this.liveLocation = {
       ...this.liveLocation,
@@ -769,11 +1000,13 @@ class AppStore {
       read: false,
     };
     this.notifications = [newItem, ...this.notifications];
+    this.syncNotificationsToCloud();
     this.notify();
   }
 
   public markAllNotificationsRead() {
     this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+    this.syncNotificationsToCloud();
     this.notify();
   }
 
@@ -800,8 +1033,10 @@ class AppStore {
         schoolName: updates.name || s.schoolName,
         schoolNameTe: updates.nameTe || s.schoolNameTe,
       }));
+      this.syncStudentsToCloud();
     }
     this.saveToStorage();
+    this.syncSchoolInfoToCloud();
     auditService.logAction('STUDENT_UPDATED', { updates });
     this.notify();
   }
@@ -821,8 +1056,10 @@ class AppStore {
             }
           : b
       );
+      this.syncBusesToCloud();
     }
     this.saveToStorage();
+    this.syncDriversToCloud();
     auditService.logAction('DRIVER_ASSIGNED', { driverId, updates });
     this.notify();
   }
@@ -834,6 +1071,7 @@ class AppStore {
     };
     this.drivers.push(newDriver);
     this.saveToStorage();
+    this.syncDriversToCloud();
     auditService.logAction('DRIVER_ASSIGNED', { driverId: newDriver.id, name: newDriver.name });
     this.notify();
     return newDriver;
@@ -848,6 +1086,7 @@ class AppStore {
       }
     }
     this.saveToStorage();
+    this.syncBusesToCloud();
     auditService.logAction('BUS_ASSIGNED', { busId, updates });
     this.notify();
   }
@@ -859,6 +1098,7 @@ class AppStore {
     };
     this.buses.push(newBus);
     this.saveToStorage();
+    this.syncBusesToCloud();
     auditService.logAction('BUS_ASSIGNED', { busId: newBus.id, busNumber: newBus.busNumber });
     this.notify();
     return newBus;
@@ -868,6 +1108,7 @@ class AppStore {
   public updatePickupPoint(pointId: string, updates: Partial<PickupPoint>) {
     this.pickupPoints = this.pickupPoints.map((p) => (p.id === pointId ? { ...p, ...updates } : p));
     this.saveToStorage();
+    this.syncPickupPointsToCloud();
     this.notify();
   }
 
@@ -879,6 +1120,7 @@ class AppStore {
     };
     this.students.push(newStudent);
     this.saveToStorage();
+    this.syncStudentsToCloud();
     auditService.logAction('STUDENT_CREATED', { studentId: newStudent.id, name: newStudent.name });
     this.notify();
   }
@@ -886,6 +1128,7 @@ class AppStore {
   public updateStudent(id: string, updates: Partial<Student>) {
     this.students = this.students.map((s) => (s.id === id ? { ...s, ...updates } : s));
     this.saveToStorage();
+    this.syncStudentsToCloud();
     auditService.logAction('STUDENT_UPDATED', { studentId: id, updates });
     this.notify();
   }
@@ -893,6 +1136,7 @@ class AppStore {
   public deleteStudent(id: string) {
     this.students = this.students.filter((s) => s.id !== id);
     this.saveToStorage();
+    this.syncStudentsToCloud();
     auditService.logAction('STUDENT_DELETED', { studentId: id });
     this.notify();
   }
@@ -903,6 +1147,7 @@ class AppStore {
       geofenceRadiusMeters: radiusMeters,
     }));
     this.saveToStorage();
+    this.syncPickupPointsToCloud();
     auditService.logAction('GEOFENCE_UPDATED', { radiusMeters });
     this.notify();
   }
@@ -922,6 +1167,12 @@ class AppStore {
       localStorage.removeItem('schoolbus_pickup_points');
       localStorage.removeItem('schoolbus_route_stops');
     }
+    this.syncSchoolInfoToCloud();
+    this.syncStudentsToCloud();
+    this.syncBusesToCloud();
+    this.syncDriversToCloud();
+    this.syncPickupPointsToCloud();
+    this.syncRouteStopsToCloud();
     this.notify();
   }
 

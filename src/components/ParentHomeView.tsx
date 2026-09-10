@@ -278,28 +278,39 @@ export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
                 </span>
               </div>
               <span className="text-xs text-[#444651]">
-                {lang === 'te' ? bus?.routeNameTe : 'DPS Primary Campus Express'}
+                {lang === 'te' ? (bus?.routeNameTe || bus?.routeName) : (bus?.routeName || 'Station Ghanpur Route #07')}
               </span>
             </div>
           </div>
 
-          {/* Live GPS Pulsing Chip */}
-          <div className="flex items-center gap-1.5 bg-[#004A31]/15 px-3 py-1 rounded-full shrink-0 border border-[#004A31]/20">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#27C38A] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#004A31]" />
-            </span>
-            <span className="text-xs font-black text-[#004A31] leading-none">
-              {getTranslation(lang, 'statusLive').toUpperCase()}
-            </span>
-          </div>
+          {/* Live GPS / Trip Status Chip */}
+          {bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP' ? (
+            <div className="flex items-center gap-1.5 bg-[#004A31]/15 px-3 py-1 rounded-full shrink-0 border border-[#004A31]/20">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#27C38A] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#004A31]" />
+              </span>
+              <span className="text-xs font-black text-[#004A31] leading-none">
+                {lang === 'te' ? 'లైవ్ ట్రిప్' : 'LIVE TRIP'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-[#EAEDFF] px-3 py-1 rounded-full shrink-0 border border-[#C5C5D3]/40">
+              <span className="w-2 h-2 rounded-full bg-[#00236F]" />
+              <span className="text-xs font-bold text-[#00236F] leading-none">
+                {lang === 'te' ? 'స్కూల్ వద్ద పార్క్' : 'PARKED AT CAMPUS'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Live Status Banner */}
         <div className="flex items-center gap-2 bg-[#EAEDFF]/70 rounded-xl p-2.5 border border-[#C5C5D3]/40">
-          <Radio className="w-4 h-4 text-[#004A31] shrink-0 animate-pulse" />
-          <p className="text-xs text-[#131B2E] leading-tight">
-            {getTranslation(lang, 'busEnRoute')}
+          <Radio className={`w-4 h-4 shrink-0 ${bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP' ? 'text-[#004A31] animate-pulse' : 'text-[#00236F]'}`} />
+          <p className="text-xs text-[#131B2E] leading-tight font-medium">
+            {bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP'
+              ? (lang === 'te' ? 'బస్సు మార్గంలో ఉంది. లైవ్ జీపీఎస్ లొకేషన్ ప్రసారం అవుతోంది.' : 'Bus is moving on route. Real-time GPS telematics broadcasting.')
+              : (lang === 'te' ? 'బస్సు శ్రీ చైతన్య స్కూల్ క్యాంపస్ లో పార్క్ చేయబడింది.' : 'Bus is parked at Sri Chaitanya School Campus, Station Ghanpur.')}
           </p>
         </div>
 
@@ -324,7 +335,7 @@ export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
                 <Check className="w-3.5 h-3.5 text-[#00236F]" />
               </div>
               <span className="text-[11px] text-[#444651]">
-                {lang === 'te' ? 'సీనియర్ డ్రైవర్ (8 సం. అనుభవం)' : 'DPS Senior Driver (8 yrs safe)'}
+                {lang === 'te' ? 'సీనియర్ డ్రైవర్ (8 సం. అనుభవం)' : 'Senior Transport Driver (Safe transit)'}
               </span>
             </div>
           </div>

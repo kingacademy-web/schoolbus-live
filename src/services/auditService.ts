@@ -1,6 +1,6 @@
 // Audit Logging Service for Administrative Compliance
-import { db, isFirebaseConfigured } from './firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { rtdb, isFirebaseConfigured } from './firebase';
+import { ref, set } from 'firebase/database';
 import { AuditLog } from '../types';
 import { authService } from './authService';
 
@@ -23,11 +23,11 @@ class AuditService {
 
     this.localLogs.unshift(logItem);
 
-    if (isFirebaseConfigured && db) {
+    if (isFirebaseConfigured && rtdb) {
       try {
-        await addDoc(collection(db, 'auditLogs'), logItem);
+        await set(ref(rtdb, `auditLogs/${logItem.id}`), logItem);
       } catch (err) {
-        console.warn('Failed to persist audit log to Firestore:', err);
+        console.warn('Failed to persist audit log to Firebase RTDB:', err);
       }
     }
   }

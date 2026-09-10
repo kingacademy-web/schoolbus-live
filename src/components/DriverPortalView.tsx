@@ -757,7 +757,7 @@ export const DriverPortalView: React.FC<DriverPortalViewProps> = ({ lang }) => {
                       type="text"
                       value={formRouteName}
                       onChange={(e) => setFormRouteName(e.target.value)}
-                      placeholder="e.g. Miyapur ➔ School Gate"
+                      placeholder="e.g. Station Ghanpur ➔ School Campus"
                       className="w-full bg-white border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-[#00236F]"
                     />
                   </div>

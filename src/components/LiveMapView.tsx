@@ -842,60 +842,37 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
           </button>
         </div>
 
-        {/* Live Simulation & GPS Hardware Toggle Ribbon */}
+        {/* Real Live GPS Telematics Ribbon */}
         <div className="flex items-center justify-between pt-1 border-t border-[#E2E7FF]/70 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#004A31] animate-pulse" />
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP'
+                  ? 'bg-[#004A31] animate-pulse'
+                  : 'bg-blue-600'
+              }`}
+            />
             <span className="font-extrabold text-[#131B2E]">
-              {getTranslation(lang, 'gpsSynced')}
+              {bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP'
+                ? lang === 'te'
+                  ? 'లైవ్ ట్రిప్ నడుస్తోంది'
+                  : 'Live Trip in Progress'
+                : lang === 'te'
+                ? 'బస్సు క్యాంపస్ వద్ద ఉంది'
+                : 'Bus Parked at School'}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Simulation Motion Toggle */}
+            {/* My Location Button */}
             <button
               type="button"
-              onClick={() => store.toggleSimulation()}
-              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors ${
-                store.isSimulating
-                  ? 'bg-[#BA1A1A] text-white'
-                  : 'bg-[#EAEDFF] text-[#00236F] hover:bg-[#DAE2FD]'
-              }`}
+              onClick={() => handleLocateUser(true)}
+              className="h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 bg-[#EAEDFF] text-[#00236F] hover:bg-[#DAE2FD] transition-colors active:scale-95"
+              title={lang === 'te' ? 'నా ప్రస్తుత స్థానం' : 'My Location'}
             >
-              {store.isSimulating ? (
-                <>
-                  <Pause className="w-3 h-3" />
-                  <span>{getTranslation(lang, 'pauseMovement')}</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-3 h-3" />
-                  <span>{getTranslation(lang, 'simulateMovement')}</span>
-                </>
-              )}
-            </button>
-
-            {/* Hardware GPS Device Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                if (store.isHardwareGpsActive) {
-                  store.stopHardwareGps();
-                  showToast('Hardware GPS Deactivated');
-                } else {
-                  store.startHardwareGps();
-                  showToast('Acquiring Real Device GPS...');
-                }
-              }}
-              className={`h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors ${
-                store.isHardwareGpsActive
-                  ? 'bg-[#004A31] text-white'
-                  : 'bg-gray-100 text-[#444651] hover:bg-gray-200'
-              }`}
-              title="Use Phone Real GPS"
-            >
-              <Smartphone className="w-3 h-3" />
-              <span>{store.isHardwareGpsActive ? 'Real GPS' : 'Device GPS'}</span>
+              <LocateFixed className="w-3 h-3 text-[#00236F]" />
+              <span>{lang === 'te' ? 'నా స్థానం' : 'My Location'}</span>
             </button>
           </div>
         </div>

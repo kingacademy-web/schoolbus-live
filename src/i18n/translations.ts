@@ -119,9 +119,9 @@ export const translations = {
     // Driver Portal
     greetingDriver: 'Namaste',
     startMorningTrip: 'START MORNING TRIP',
-    startMorningTripSub: 'Miyapur (06:45 AM) ➔ School Gate',
+    startMorningTripSub: 'Station Ghanpur (07:15 AM) ➔ School Campus',
     startReturnTrip: 'START RETURN TRIP',
-    startReturnTripSub: 'School Gate (03:30 PM) ➔ Miyapur Drop',
+    startReturnTripSub: 'School Campus (04:15 PM) ➔ Station Ghanpur Drop',
     endLiveTrip: 'END LIVE TRIP',
     gpsBroadcastActive: 'GPS BROADCAST ACTIVE',
     gpsBroadcastActiveSub: 'Live coordinates visible to verified parents',
@@ -417,9 +417,9 @@ export const translations = {
     // Driver Portal
     greetingDriver: 'నమస్కారం',
     startMorningTrip: 'ఉదయం ట్రిప్ ప్రారంభించండి',
-    startMorningTripSub: 'మియాపూర్ (06:45 AM) ➔ స్కూల్ గేట్',
+    startMorningTripSub: 'స్టేషన్ ఘన్‌పూర్ (07:15 AM) ➔ స్కూల్ క్యాంపస్',
     startReturnTrip: 'తిరుగు ప్రయాణం ప్రారంభించండి',
-    startReturnTripSub: 'స్కూల్ గేట్ (03:30 PM) ➔ మియాపూర్ డ్రాప్',
+    startReturnTripSub: 'స్కూల్ క్యాంపస్ (04:15 PM) ➔ స్టేషన్ ఘన్‌పూర్ డ్రాప్',
     endLiveTrip: 'ట్రిప్ ముగించండి',
     gpsBroadcastActive: 'లైవ్ జీపీఎస్ బ్రాడ్‌కాస్ట్ అవుతోంది',
     gpsBroadcastActiveSub: 'లైవ్ లొకేషన్ తల్లిదండ్రులకు కనిపిస్తోంది',

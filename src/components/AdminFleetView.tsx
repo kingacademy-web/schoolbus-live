@@ -77,7 +77,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
   const [newStudentName, setNewStudentName] = useState('K. Rithvik');
   const [newStudentClass, setNewStudentClass] = useState('Class 3 - A');
   const [newStudentPhone, setNewStudentPhone] = useState('+91 98490 11223');
-  const [newStudentStop, setNewStudentStop] = useState('Miyapur Cross Roads');
+  const [newStudentStop, setNewStudentStop] = useState('Station Ghanpur Main Road');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -377,7 +377,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
               </span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EAEDFF] text-[#00236F] font-bold">
-              Kukatpally - Miyapur Corridor
+              Station Ghanpur - Jangaon Corridor
             </span>
           </div>
 
@@ -714,9 +714,10 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                     Assigned Bus
                   </label>
                   <select className="w-full h-11 px-3 rounded-xl bg-[#F2F3FF] text-[#131B2E] text-xs font-semibold focus:outline-none border border-[#E2E7FF]">
-                    <option>BUS-07 (Miyapur)</option>
-                    <option>BUS-01 (Kukatpally)</option>
-                    <option>BUS-04 (Nizampet)</option>
+                    <option>BUS-07 (Station Ghanpur Town)</option>
+                    <option>BUS-01 (Zaffergadh Route)</option>
+                    <option>BUS-04 (Raghunathpally Route)</option>
+                    <option>BUS-02 (Chilpur Rural)</option>
                   </select>
                 </div>
               </div>
@@ -815,7 +816,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                 </div>
                 <div className="flex justify-between py-1 bg-white px-2.5 rounded-lg border border-[#E2E7FF]">
                   <span className="text-[#444651]">Assigned Vehicle</span>
-                  <span className="font-bold text-[#00236F]">BUS-07 (Miyapur Route)</span>
+                  <span className="font-bold text-[#00236F]">BUS-07 (Station Ghanpur Route)</span>
                 </div>
                 <div className="flex justify-between py-1 bg-white px-2.5 rounded-lg border border-[#E2E7FF]">
                   <span className="text-[#444651]">Safety Rating</span>
@@ -906,11 +907,11 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                 <h4 className="text-xs font-bold text-[#131B2E]">BUS-07 Stop Sequencing</h4>
                 <div className="space-y-1 text-xs">
                   <div className="p-2 rounded-xl bg-[#F2F3FF] flex justify-between">
-                    <span>1. Miyapur Cross Roads (6:50 AM)</span>
+                    <span>1. School Campus (Sri Chaitanya) (7:15 AM)</span>
                     <span className="text-[#004A31] font-bold">Passed</span>
                   </div>
                   <div className="p-2 rounded-xl bg-[#F2F3FF] flex justify-between">
-                    <span>2. Allwyn Colony Center (7:05 AM)</span>
+                    <span>2. Station Ghanpur Bypass (7:25 AM)</span>
                     <span className="text-[#004A31] font-bold">Passed</span>
                   </div>
                   <div className="p-2 rounded-xl bg-[#EAEDFF] flex justify-between border border-[#00236F]">
@@ -1221,7 +1222,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                   type="text"
                   value={formBusRoute}
                   onChange={(e) => setFormBusRoute(e.target.value)}
-                  placeholder="e.g. Miyapur ➔ School"
+                  placeholder="e.g. Station Ghanpur ➔ Campus"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold"
                 />
               </div>
@@ -1234,7 +1235,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                   type="text"
                   value={formBusRouteTe}
                   onChange={(e) => setFormBusRouteTe(e.target.value)}
-                  placeholder="ఉదా: మియాపూర్ ➔ స్కూల్"
+                  placeholder="ఉదా: స్టేషన్ ఘన్‌పూర్ ➔ క్యాంపస్"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold"
                 />
               </div>
@@ -1344,7 +1345,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                   type="text"
                   value={newBusRoute}
                   onChange={(e) => setNewBusRoute(e.target.value)}
-                  placeholder="e.g. Madhapur ➔ Campus"
+                  placeholder="e.g. Station Ghanpur ➔ Campus"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold"
                 />
               </div>
@@ -1357,7 +1358,7 @@ export const AdminFleetView: React.FC<AdminFleetViewProps> = ({ lang, onTrackBus
                   type="text"
                   value={newBusRouteTe}
                   onChange={(e) => setNewBusRouteTe(e.target.value)}
-                  placeholder="ఉదా: మాదాపూర్ ➔ క్యాంపస్"
+                  placeholder="ఉదా: స్టేషన్ ఘన్‌పూర్ ➔ క్యాంపస్"
                   className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl px-3 py-2 text-xs font-semibold"
                 />
               </div>

@@ -1,6 +1,6 @@
-// Trip Management Service supporting Firestore & Emergency Dispatch
-import { db, isFirebaseConfigured } from './firebase';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+// Trip Management Service supporting Firebase Realtime Database & Emergency Dispatch
+import { rtdb, isFirebaseConfigured } from './firebase';
+import { ref, set, update } from 'firebase/database';
 import { Trip, TripState } from '../types';
 
 export const tripService = {
@@ -17,12 +17,11 @@ export const tripService = {
       boardedStudentIds: [],
     };
 
-    if (isFirebaseConfigured && db) {
+    if (isFirebaseConfigured && rtdb) {
       try {
-        const docRef = await addDoc(collection(db, 'trips'), newTrip);
-        newTrip.id = docRef.id;
+        await set(ref(rtdb, `trips/${newTrip.id}`), newTrip);
       } catch (e) {
-        console.warn('Firestore trip creation warning:', e);
+        console.warn('Firebase RTDB trip creation warning:', e);
       }
     }
 
@@ -30,27 +29,29 @@ export const tripService = {
   },
 
   async endTrip(tripId: string, distanceKm: number): Promise<void> {
-    if (isFirebaseConfigured && db && tripId) {
+    if (isFirebaseConfigured && rtdb && tripId) {
       try {
-        await updateDoc(doc(db, 'trips', tripId), {
+        await update(ref(rtdb, `trips/${tripId}`), {
           endedAt: Date.now(),
           status: 'COMPLETED' as TripState,
           distanceTraveledKm: distanceKm,
         });
       } catch (e) {
-        console.warn('Firestore trip completion update warning:', e);
+        console.warn('Firebase RTDB trip completion update warning:', e);
       }
     }
   },
 
   async triggerEmergency(tripId: string, busId: string, description: string): Promise<void> {
-    if (isFirebaseConfigured && db && tripId) {
+    if (isFirebaseConfigured && rtdb && tripId) {
       try {
-        await updateDoc(doc(db, 'trips', tripId), {
+        await update(ref(rtdb, `trips/${tripId}`), {
           status: 'EMERGENCY' as TripState,
           lastEmergencyAt: Date.now(),
         });
-        await addDoc(collection(db, 'emergencyEvents'), {
+        const eventId = `event_${Date.now()}`;
+        await set(ref(rtdb, `emergencyEvents/${eventId}`), {
+          id: eventId,
           tripId,
           busId,
           description,
@@ -58,7 +59,7 @@ export const tripService = {
           resolved: false,
         });
       } catch (e) {
-        console.warn('Firestore emergency event warning:', e);
+        console.warn('Firebase RTDB emergency event warning:', e);
       }
     }
   },

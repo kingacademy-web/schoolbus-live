@@ -86,24 +86,14 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
 
-              {/* Mode Badge: LIVE vs DEMO */}
-              <button
-                type="button"
-                onClick={toggleGpsMode}
-                className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-2xs ${
-                  gpsMode === 'LIVE'
-                    ? 'bg-[#004A31] text-emerald-100 ring-1 ring-emerald-400/40'
-                    : 'bg-amber-100 text-amber-900 ring-1 ring-amber-400/50'
-                }`}
-                title="Toggle between Real GPS and Simulation Demo mode"
+              {/* Cloud Live Status Badge */}
+              <div
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs bg-[#004A31] text-emerald-100 ring-1 ring-emerald-400/40"
+                title="Firebase Realtime Cloud Database Connected"
               >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    gpsMode === 'LIVE' ? 'bg-[#4EDEA3] animate-ping' : 'bg-amber-500'
-                  }`}
-                />
-                <span>{gpsMode === 'LIVE' ? 'LIVE GPS' : 'DEMO'}</span>
-              </button>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4EDEA3] animate-ping" />
+                <span>{lang === 'te' ? 'క్లౌడ్ లైవ్' : 'CLOUD LIVE'}</span>
+              </div>
             </div>
             <span className="text-[10px] sm:text-[11px] text-[#444651] leading-none truncate">
               {lang === 'te' ? 'ఘన్‌పూర్ (స్టేషన్) • లైవ్ బస్ ట్రాకింగ్' : 'Ghanpur (Stn), Jangaon • Live GPS'}

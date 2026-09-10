@@ -7,7 +7,7 @@ import { getDatabase, Database } from 'firebase/database';
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCGSs4HE0pVJG7UzivfcE7SQQHBUiV1Xhc',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'schoolbus-live-e83f8.firebaseapp.com',
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || 'https://schoolbus-live-e83f8-default-rtdb.firebaseio.com',
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || 'https://schoolbus-live-e83f8-default-rtdb.asia-southeast1.firebasedatabase.app',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'schoolbus-live-e83f8',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'schoolbus-live-e83f8.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '548216238616',
