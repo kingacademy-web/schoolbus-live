@@ -68,10 +68,10 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         zoomControl: false,
       });
 
-      // Free OpenStreetMap or CartoDB clean tiles (ultra clear, low latency, no API key required)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      // 100% Free OpenStreetMap public tiles (clean, fast, zero watermark, no API key required)
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
       }).addTo(map);
 
       mapInstanceRef.current = map;
