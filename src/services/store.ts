@@ -134,13 +134,13 @@ class AppStore {
           const parsed = JSON.parse(savedSchool);
           if (parsed && (parsed.name?.includes('Delhi') || !parsed.name)) {
             this.schoolInfo = { ...INITIAL_SCHOOL_INFO };
-            this.saveToStorage('schoolbus_school_info', this.schoolInfo);
+            this.saveToStorage();
           } else {
             this.schoolInfo = parsed;
           }
         } else {
           this.schoolInfo = { ...INITIAL_SCHOOL_INFO };
-          this.saveToStorage('schoolbus_school_info', this.schoolInfo);
+          this.saveToStorage();
         }
 
         const savedStudents = localStorage.getItem('schoolbus_students');
@@ -156,33 +156,51 @@ class AppStore {
             }
             return s;
           });
-          this.saveToStorage('schoolbus_students', this.students);
+          this.saveToStorage();
         }
 
         const savedBuses = localStorage.getItem('schoolbus_buses');
-        if (savedBuses) this.buses = JSON.parse(savedBuses);
+        if (savedBuses) {
+          const parsed = JSON.parse(savedBuses);
+          if (Array.isArray(parsed) && parsed.some((b: any) => b.routeName?.includes('Miyapur') || b.currentLocationName?.includes('Metro'))) {
+            this.buses = [...INITIAL_BUSES];
+          } else {
+            this.buses = parsed;
+          }
+        }
 
         const savedDrivers = localStorage.getItem('schoolbus_drivers');
         if (savedDrivers) this.drivers = JSON.parse(savedDrivers);
 
         const savedPickups = localStorage.getItem('schoolbus_pickup_points');
-        if (savedPickups) this.pickupPoints = JSON.parse(savedPickups);
+        if (savedPickups) {
+          const parsed = JSON.parse(savedPickups);
+          if (Array.isArray(parsed) && parsed.some((p: any) => p.lat < 17.6 || p.landmark?.includes('Hyderabad'))) {
+            this.pickupPoints = [...INITIAL_PICKUP_POINTS];
+          } else {
+            this.pickupPoints = parsed;
+          }
+        }
 
         const savedStops = localStorage.getItem('schoolbus_route_stops');
         if (savedStops) {
           const parsedStops = JSON.parse(savedStops);
-          this.routeStops = parsedStops.map((st: RouteStop) => {
-            if (st.id === 'stop_school' || st.stopName?.includes('DPS')) {
-              return {
-                ...st,
-                stopName: 'School Campus (Sri Chaitanya)',
-                stopNameTe: 'పాఠశాల క్యాంపస్ (శ్రీ చైతన్య)',
-              };
-            }
-            return st;
-          });
-          this.saveToStorage('schoolbus_route_stops', this.routeStops);
+          if (Array.isArray(parsedStops) && parsedStops.some((st: any) => st.stopName?.includes('Metro') || st.stopName?.includes('Hitech'))) {
+            this.routeStops = [...INITIAL_ROUTE_STOPS];
+          } else {
+            this.routeStops = parsedStops.map((st: RouteStop) => {
+              if (st.id === 'stop_school' || st.stopName?.includes('DPS')) {
+                return {
+                  ...st,
+                  stopName: 'School Campus (Sri Chaitanya)',
+                  stopNameTe: 'పాఠశాల క్యాంపస్ (శ్రీ చైతన్య)',
+                };
+              }
+              return st;
+            });
+          }
         }
+        this.saveToStorage();
       } catch (e) {
         console.warn('Error reading persisted data from localStorage:', e);
       }

@@ -19,9 +19,13 @@ import {
   MapPin,
   School,
   UserCheck,
+  LocateFixed,
+  Layers,
+  Maximize2,
+  Loader2,
 } from 'lucide-react';
 import L from 'leaflet';
-import { store } from '../services/store';
+import { store, calculateDistanceKm } from '../services/store';
 import { Language } from '../types';
 import { getTranslation } from '../i18n/translations';
 
@@ -29,15 +33,36 @@ interface LiveMapViewProps {
   lang: Language;
 }
 
+type MapLayerMode = 'google_roads' | 'google_satellite' | 'osm';
+
 export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const busMarkerRef = useRef<L.Marker | null>(null);
   const geofenceCircleRef = useRef<L.Circle | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const userCircleRef = useRef<L.Circle | null>(null);
+  const activeTileLayerRef = useRef<L.TileLayer | null>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [trafficActive, setTrafficActive] = useState(true);
+  const [mapLayer, setMapLayer] = useState<MapLayerMode>('google_roads');
+  const [isLocating, setIsLocating] = useState(false);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+    accuracy: number;
+  } | null>(null);
+
+  // Subscribe to reactive store updates (so hardware GPS, driver updates, simulation move smoothly)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = store.subscribe(() => {
+      setTick((t) => t + 1);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const student = store.getStudent();
   const bus = store.getBus();
@@ -53,14 +78,180 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
     }, 2800);
   };
 
-  // Initialize interactive Leaflet map
+  // Switch map tile layer
+  const switchMapLayer = (mode: MapLayerMode) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (activeTileLayerRef.current) {
+      map.removeLayer(activeTileLayerRef.current);
+    }
+
+    let layer: L.TileLayer;
+    if (mode === 'google_satellite') {
+      layer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps (Satellite)',
+      });
+    } else if (mode === 'osm') {
+      layer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      });
+    } else {
+      // Default: Google Roads (lightning-fast, clean, crisp Indian roads, zero API key)
+      layer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps',
+      });
+    }
+
+    layer.addTo(map);
+    activeTileLayerRef.current = layer;
+    setMapLayer(mode);
+
+    const label =
+      mode === 'google_roads'
+        ? (lang === 'te' ? 'గూగుల్ రోడ్స్ మ్యాప్' : 'Google Roads Map')
+        : mode === 'google_satellite'
+        ? (lang === 'te' ? 'శాటిలైట్ హైబ్రిడ్ మ్యాప్' : 'Satellite Hybrid Map')
+        : (lang === 'te' ? 'ఓపెన్‌స్ట్రీట్ మ్యాప్' : 'OpenStreetMap');
+    showToast(label);
+  };
+
+  // Locate user's real physical location using browser navigator.geolocation
+  const handleLocateUser = (panTo: boolean = true) => {
+    if (!navigator.geolocation) {
+      showToast(lang === 'te' ? 'మీ బ్రౌజర్‌లో GPS సదుపాయం లేదు.' : 'Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const accuracy = Math.round(pos.coords.accuracy || 20);
+        setUserLocation({ lat, lng, accuracy });
+
+        const map = mapInstanceRef.current;
+        if (!map) return;
+
+        const distToBus = calculateDistanceKm(lat, lng, liveLocation.lat, liveLocation.lng);
+
+        // Custom User Live Pin (High-visibility pulsating blue dot)
+        const userIcon = L.divIcon({
+          className: 'custom-user-marker',
+          html: `
+            <div style="position:relative; width:38px; height:38px; display:flex; align-items:center; justify-content:center; transform: translate(-50%, -50%);">
+              <div style="position:absolute; inset:0; border-radius:50%; background:rgba(37,99,235,0.35); animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+              <div style="width:20px; height:20px; border-radius:50%; background:#2563EB; border:3.5px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); z-index:2;"></div>
+              <div style="position:absolute; top:-22px; background:#1E3A8A; color:white; font-size:10px; font-weight:800; padding:2px 7px; border-radius:99px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.4);">
+                📍 ${lang === 'te' ? 'మీరు' : 'You'}
+              </div>
+            </div>
+          `,
+          iconSize: [38, 38],
+          iconAnchor: [19, 19],
+        });
+
+        const popupHtml = `
+          <div style="font-family:inherit; min-width:150px; padding:2px;">
+            <div style="font-size:13px; font-weight:800; color:#1E3A8A; margin-bottom:3px; display:flex; align-items:center; gap:4px;">
+              <span>📍 ${lang === 'te' ? 'మీ ప్రస్తుత లొకేషన్' : 'Your Current Location'}</span>
+            </div>
+            <div style="font-size:11px; color:#444651; margin-bottom:4px;">
+              ${lang === 'te' ? 'GPS ఖచ్చితత్వం' : 'Accuracy'}: ±${accuracy}m
+            </div>
+            <div style="font-size:11px; font-weight:bold; color:#00236F; padding-top:4px; border-top:1px solid #E2E7FF;">
+              ${lang === 'te' ? 'బస్సు నుండి దూరం' : 'Distance to Bus'}: <strong>${distToBus} km</strong>
+            </div>
+          </div>
+        `;
+
+        if (!userMarkerRef.current) {
+          userMarkerRef.current = L.marker([lat, lng], {
+            icon: userIcon,
+            zIndexOffset: 950,
+          })
+            .addTo(map)
+            .bindPopup(popupHtml);
+        } else {
+          userMarkerRef.current.setLatLng([lat, lng]);
+          userMarkerRef.current.setIcon(userIcon);
+          userMarkerRef.current.setPopupContent(popupHtml);
+        }
+
+        // Accuracy Halo circle
+        if (!userCircleRef.current) {
+          userCircleRef.current = L.circle([lat, lng], {
+            radius: Math.max(accuracy, 25),
+            color: '#2563EB',
+            weight: 1.5,
+            fillColor: '#3B82F6',
+            fillOpacity: 0.15,
+          }).addTo(map);
+        } else {
+          userCircleRef.current.setLatLng([lat, lng]);
+          userCircleRef.current.setRadius(Math.max(accuracy, 25));
+        }
+
+        if (panTo) {
+          map.flyTo([lat, lng], 16, { duration: 1 });
+          userMarkerRef.current.openPopup();
+          showToast(
+            lang === 'te'
+              ? '✅ మీ ప్రస్తుత లొకేషన్ గుర్తించబడింది!'
+              : '✅ Current location found!'
+          );
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn('Geolocation error:', err.message);
+        if (panTo) {
+          showToast(
+            lang === 'te'
+              ? 'లొకేషన్ యాక్సెస్ తిరస్కరించబడింది. దయచేసి ఫోన్‌లో GPS అనుమతించండి.'
+              : 'Location permission denied. Please allow GPS access in settings.'
+          );
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+    );
+  };
+
+  // Fit bounds to show User, Bus, School, and Pickup point all at once
+  const handleFitAll = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const points: [number, number][] = [
+      [liveLocation.lat, liveLocation.lng],
+      [17.8580, 79.3175], // School campus Station Ghanpur
+    ];
+    if (pickupPoint?.lat && pickupPoint?.lng) {
+      points.push([pickupPoint.lat, pickupPoint.lng]);
+    }
+    if (userLocation) {
+      points.push([userLocation.lat, userLocation.lng]);
+    }
+
+    map.fitBounds(points, { padding: [50, 50], maxZoom: 16 });
+    showToast(lang === 'te' ? 'మొత్తం రూట్ సర్దుబాటు చేయబడింది' : 'Full route view aligned');
+  };
+
+  // Initialize interactive Leaflet map & ensure container sizing is never 0
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Initialize map centered at bus location or Hyderabad Outer Ring Road
-      const initialLat = liveLocation.lat || 17.478;
-      const initialLng = liveLocation.lng || 78.353;
+      // Station Ghanpur coordinates default
+      const initialLat = liveLocation.lat || 17.854;
+      const initialLng = liveLocation.lng || 79.314;
 
       const map = L.map(mapContainerRef.current, {
         center: [initialLat, initialLng],
@@ -68,15 +259,17 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         zoomControl: false,
       });
 
-      // 100% Free OpenStreetMap public tiles (clean, fast, zero watermark, no API key required)
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+      // Default: Google Maps Roads tile layer (fast, clean, 100% free, no API key, no watermark)
+      const initialTile = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps',
       }).addTo(map);
 
+      activeTileLayerRef.current = initialTile;
       mapInstanceRef.current = map;
 
-      // 1. School Campus Destination Marker (Sri Chaitanya School)
+      // 1. School Campus Destination Marker (Sri Chaitanya School, Station Ghanpur)
       const campusLabel = lang === 'te' ? store.schoolInfo.nameTe : store.schoolInfo.name;
       const schoolIcon = L.divIcon({
         className: 'custom-school-marker',
@@ -93,7 +286,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         iconSize: [40, 50],
         iconAnchor: [20, 50],
       });
-      L.marker([17.4125, 78.358], { icon: schoolIcon }).addTo(map);
+      L.marker([17.8580, 79.3175], { icon: schoolIcon }).addTo(map);
 
       // 2. Pickup Point Marker (Sadvik Stop) + 500m Safety Perimeter Circle
       if (pickupPoint) {
@@ -129,17 +322,15 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         geofenceCircleRef.current = circle;
       }
 
-      // 3. Route Polylines (Trajectory from Miyapur to DPS via Sadvik's stop)
+      // 3. Station Ghanpur Route Polylines
       const routeCoordinates: [number, number][] = [
-        [17.470, 78.344],
-        [17.475, 78.349],
-        [17.478, 78.353],
-        [17.483, 78.357],
-        [17.487, 78.3595],
-        [17.4895, 78.361],
-        [17.494, 78.375],
-        [17.450, 78.365],
-        [17.4125, 78.358],
+        [17.8450, 79.3010], // Jangaon-Ghanpur Highway approach
+        [17.8485, 79.3060], // Bypass Junction
+        [17.8510, 79.3090], // Town Entry
+        [17.8518, 79.3105], // 500m zone entry
+        [17.8520, 79.3110], // Sadvik Pickup Stop
+        [17.8545, 79.3135], // Railway Station Road
+        [17.8580, 79.3175], // Sri Chaitanya School Campus
       ];
 
       // Road pathway base line
@@ -168,52 +359,88 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
       }).addTo(map);
     }
 
-    // Update Live Bus Marker
-    const map = mapInstanceRef.current;
-    if (map) {
-      const busIcon = L.divIcon({
-        className: 'custom-bus-marker',
-        html: `
-          <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -50%); position:relative;">
-            <!-- Radar Radiance Ring -->
-            <div style="position:absolute; inset:-12px; border-radius:50%; background:rgba(254,166,25,0.35); animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; pointer-events:none;"></div>
-            
-            <!-- Bus Tag Pill -->
-            <div style="background:#00236F; color:white; border-radius:99px; padding:3px 8px; box-shadow:0 4px 12px rgba(0,0,0,0.25); display:flex; align-items:center; gap:4px; font-size:11px; font-weight:800; white-space:nowrap; margin-bottom:4px; z-index:2;">
-              <span style="width:6px; height:6px; border-radius:50%; background:#6FFBBE;"></span>
-              <span>${bus?.busNumber || 'BUS-07'}</span>
-              <span style="color:#B6C4FF; font-size:10px; margin-left:2px;">${liveLocation.speed} km/h</span>
-            </div>
+    // Attempt silent geolocation on initial load so user pin shows up
+    if (navigator.geolocation && !userLocation) {
+      handleLocateUser(false);
+    }
+  }, []);
 
-            <!-- Bus Avatar Pin with Heading Compass Arrow -->
-            <div style="width:46px; height:46px; border-radius:16px; background:#FEA619; color:#684000; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(0,0,0,0.3); border:2px solid white; position:relative; z-index:1;">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/></svg>
-              <!-- Heading Indicator Arrow -->
-              <div style="position:absolute; top:-4px; right:-4px; width:18px; height:18px; border-radius:50%; background:#00236F; color:white; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,0.2);">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
-              </div>
+  // Guarantee tile fetching by invalidating size across layout changes and resize
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const ro = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+    ro.observe(mapContainerRef.current);
+
+    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 100);
+    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 300);
+    const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 800);
+
+    const handleResize = () => mapInstanceRef.current?.invalidateSize();
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      ro.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Update Live Bus Marker on coordinate changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !liveLocation.lat || !liveLocation.lng) return;
+
+    const busIcon = L.divIcon({
+      className: 'custom-bus-marker',
+      html: `
+        <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -50%); position:relative;">
+          <!-- Radar Radiance Ring -->
+          <div style="position:absolute; inset:-12px; border-radius:50%; background:rgba(254,166,25,0.35); animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; pointer-events:none;"></div>
+          
+          <!-- Bus Tag Pill -->
+          <div style="background:#00236F; color:white; border-radius:99px; padding:3px 8px; box-shadow:0 4px 12px rgba(0,0,0,0.25); display:flex; align-items:center; gap:4px; font-size:11px; font-weight:800; white-space:nowrap; margin-bottom:4px; z-index:2;">
+            <span style="width:6px; height:6px; border-radius:50%; background:#6FFBBE;"></span>
+            <span>${bus?.busNumber || 'BUS-07'}</span>
+            <span style="color:#B6C4FF; font-size:10px; margin-left:2px;">${liveLocation.speed} km/h</span>
+          </div>
+
+          <!-- Bus Avatar Pin with Heading Compass Arrow -->
+          <div style="width:46px; height:46px; border-radius:16px; background:#FEA619; color:#684000; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(0,0,0,0.3); border:2px solid white; position:relative; z-index:1;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/></svg>
+            <!-- Heading Indicator Arrow -->
+            <div style="position:absolute; top:-4px; right:-4px; width:18px; height:18px; border-radius:50%; background:#00236F; color:white; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,0.2);">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
             </div>
           </div>
-        `,
-        iconSize: [50, 70],
-        iconAnchor: [25, 35],
-      });
+        </div>
+      `,
+      iconSize: [50, 70],
+      iconAnchor: [25, 35],
+    });
 
-      if (!busMarkerRef.current) {
-        busMarkerRef.current = L.marker([liveLocation.lat, liveLocation.lng], {
-          icon: busIcon,
-          zIndexOffset: 1000,
-        }).addTo(map);
-      } else {
-        busMarkerRef.current.setLatLng([liveLocation.lat, liveLocation.lng]);
-        busMarkerRef.current.setIcon(busIcon);
-      }
+    if (!busMarkerRef.current) {
+      busMarkerRef.current = L.marker([liveLocation.lat, liveLocation.lng], {
+        icon: busIcon,
+        zIndexOffset: 1000,
+      }).addTo(map);
+    } else {
+      busMarkerRef.current.setLatLng([liveLocation.lat, liveLocation.lng]);
+      busMarkerRef.current.setIcon(busIcon);
     }
   }, [liveLocation.lat, liveLocation.lng, liveLocation.speed, bus?.busNumber]);
 
   // Recenter on bus
   const handleRecenterBus = () => {
-    if (mapInstanceRef.current) {
+    if (mapInstanceRef.current && liveLocation.lat && liveLocation.lng) {
       mapInstanceRef.current.flyTo([liveLocation.lat, liveLocation.lng], 15, {
         duration: 0.8,
       });
@@ -258,9 +485,13 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
       )}
 
       {/* Interactive Live Map Viewport Area */}
-      <div className="relative w-full h-[460px] sm:h-[500px] bg-[#E2E7FF] overflow-hidden shadow-inner">
+      <div className="relative w-full h-[470px] sm:h-[520px] bg-[#E2E7FF] overflow-hidden shadow-inner">
         {/* Leaflet Map Canvas */}
-        <div ref={mapContainerRef} className="w-full h-full z-0" />
+        <div
+          ref={mapContainerRef}
+          className="w-full h-full z-0"
+          style={{ minHeight: '450px', height: '100%', width: '100%', position: 'relative' }}
+        />
 
         {/* Floating Top Realtime Telemetry HUD Card */}
         <div className="absolute top-3 left-3 right-3 z-20">
@@ -321,6 +552,21 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
               </div>
             </div>
 
+            {/* User Distance Badge (Calculated in real-time when user location is known) */}
+            {userLocation && (
+              <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs text-[#1E3A8A] font-bold">
+                  <LocateFixed className="w-3.5 h-3.5 text-[#2563EB]" />
+                  <span>
+                    {lang === 'te' ? 'మీ స్థానం నుండి బస్సు దూరం' : 'Bus distance from you'}:
+                  </span>
+                </div>
+                <span className="text-xs font-black text-[#1E3A8A] bg-white px-2 py-0.5 rounded-md shadow-2xs">
+                  {calculateDistanceKm(userLocation.lat, userLocation.lng, liveLocation.lat, liveLocation.lng)} km
+                </span>
+              </div>
+            )}
+
             {/* Micro Status Progress Ribbon */}
             <div className="flex items-center justify-between px-1 pt-0.5 text-xs">
               <div className="flex items-center gap-1.5 text-[#131B2E] font-semibold truncate">
@@ -339,17 +585,74 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
 
         {/* Floating Map Control FAB Stack (Right Edge) */}
         <div className="absolute right-3 bottom-6 z-20 flex flex-col gap-2">
-          {/* Recenter Live Bus Location */}
+          {/* 📍 My Location Button (Dedicated Device GPS Finder) */}
+          <button
+            type="button"
+            onClick={() => handleLocateUser(true)}
+            disabled={isLocating}
+            className={`w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border ${
+              userLocation
+                ? 'bg-[#2563EB] text-white border-[#1E3A8A] ring-2 ring-[#93C5FD]'
+                : 'bg-white text-[#2563EB] border-[#E2E7FF] hover:bg-blue-50'
+            }`}
+            title={lang === 'te' ? 'నా ప్రస్తుత లొకేషన్ చూపించు' : 'Find My Current Location'}
+            aria-label="My Location"
+          >
+            {isLocating ? (
+              <Loader2 className="w-6 h-6 animate-spin text-[#2563EB]" />
+            ) : (
+              <LocateFixed className="w-6 h-6" />
+            )}
+          </button>
+
+          {/* 🎯 Recenter Live Bus Location */}
           <button
             type="button"
             onClick={handleRecenterBus}
             className="w-12 h-12 rounded-2xl bg-white text-[#00236F] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
+            title={getTranslation(lang, 'centerBus')}
             aria-label={getTranslation(lang, 'centerBus')}
           >
             <Crosshair className="w-6 h-6" />
           </button>
 
-          {/* Zoom In Control */}
+          {/* 🔲 Fit All Bounds (User + Bus + School) */}
+          <button
+            type="button"
+            onClick={handleFitAll}
+            className="w-12 h-12 rounded-2xl bg-white text-[#444651] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
+            title={lang === 'te' ? 'మొత్తం రూట్ సర్దుబాటు చేయి' : 'Fit Entire Route'}
+            aria-label="Fit All"
+          >
+            <Maximize2 className="w-5 h-5" />
+          </button>
+
+          {/* 🗺️ Map Layer Switcher (Roads / Satellite / OSM) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (mapLayer === 'google_roads') switchMapLayer('google_satellite');
+              else if (mapLayer === 'google_satellite') switchMapLayer('osm');
+              else switchMapLayer('google_roads');
+            }}
+            className={`w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] ${
+              mapLayer === 'google_satellite'
+                ? 'bg-[#00236F] text-white'
+                : 'bg-white text-[#444651] hover:bg-gray-50'
+            }`}
+            title={
+              mapLayer === 'google_roads'
+                ? 'Map: Roads'
+                : mapLayer === 'google_satellite'
+                ? 'Map: Satellite'
+                : 'Map: OpenStreetMap'
+            }
+            aria-label="Toggle Map Layer"
+          >
+            <Layers className="w-5 h-5" />
+          </button>
+
+          {/* ➕ Zoom In Control */}
           <button
             type="button"
             onClick={() => handleZoom(1)}
@@ -359,7 +662,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
             <Plus className="w-6 h-6" />
           </button>
 
-          {/* Traffic Layer Toggle */}
+          {/* 🚗 Traffic Layer Toggle */}
           <button
             type="button"
             onClick={handleToggleTraffic}
