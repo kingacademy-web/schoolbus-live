@@ -45,6 +45,14 @@ class GpsService {
   private lastError: string | null = null;
   private updateCallbacks: Set<(data: LiveLocationData) => void> = new Set();
   private errorCallbacks: Set<(err: string) => void> = new Set();
+  private wakeLock: any = null;
+  private audioKeepAlive: HTMLAudioElement | null = null;
+
+  private handleVisibilityChange = async () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && this.isTracking) {
+      await this.requestWakeLock();
+    }
+  };
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -56,6 +64,10 @@ class GpsService {
 
   public isSupported(): boolean {
     return typeof window !== 'undefined' && 'geolocation' in navigator;
+  }
+
+  public isWakeLockActive(): boolean {
+    return this.wakeLock !== null;
   }
 
   public getTrackingStatus(): GpsStatus {
@@ -95,6 +107,14 @@ class GpsService {
     try {
       this.isTracking = true;
 
+      // Keep phone screen awake during active driver trip
+      this.requestWakeLock();
+      this.startAudioKeepAlive();
+
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+      }
+
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => this.handleGpsPosition(pos),
         (err) => this.handleGpsError(err),
@@ -108,6 +128,8 @@ class GpsService {
       return true;
     } catch (e: any) {
       this.isTracking = false;
+      this.releaseWakeLock();
+      this.stopAudioKeepAlive();
       const errorMsg = `Unable to start GPS: ${e?.message || 'Unknown error'}`;
       this.lastError = errorMsg;
       this.errorCallbacks.forEach((cb) => cb(errorMsg));
@@ -120,12 +142,65 @@ class GpsService {
       navigator.geolocation.clearWatch(this.watchId);
       this.watchId = null;
     }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+    this.releaseWakeLock();
+    this.stopAudioKeepAlive();
     this.isTracking = false;
     this.currentBusId = null;
     this.currentDriverId = null;
     this.currentTripId = null;
     this.updateCallbacks.clear();
     this.errorCallbacks.clear();
+  }
+
+  private async requestWakeLock() {
+    try {
+      if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+        this.wakeLock = await (navigator as any).wakeLock.request('screen');
+        this.wakeLock.addEventListener('release', () => {
+          this.wakeLock = null;
+        });
+      }
+    } catch (err) {
+      console.warn('Wake Lock request notice:', err);
+    }
+  }
+
+  private releaseWakeLock() {
+    if (this.wakeLock) {
+      try {
+        this.wakeLock.release().catch(() => {});
+      } catch {}
+      this.wakeLock = null;
+    }
+  }
+
+  private startAudioKeepAlive() {
+    try {
+      if (typeof window !== 'undefined' && !this.audioKeepAlive) {
+        // Minimal silent base64 WAV loop ensures background worker / geolocation is not throttled
+        const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        const audio = new Audio(silentWav);
+        audio.loop = true;
+        audio.volume = 0.01;
+        audio.play().catch(() => {});
+        this.audioKeepAlive = audio;
+      }
+    } catch (err) {
+      console.warn('Audio keep-alive notice:', err);
+    }
+  }
+
+  private stopAudioKeepAlive() {
+    if (this.audioKeepAlive) {
+      try {
+        this.audioKeepAlive.pause();
+        this.audioKeepAlive.src = '';
+      } catch {}
+      this.audioKeepAlive = null;
+    }
   }
 
   private handleGpsPosition(pos: GeolocationPosition) {

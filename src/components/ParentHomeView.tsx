@@ -153,39 +153,6 @@ export const ParentHomeView: React.FC<ParentHomeViewProps> = ({
 
   return (
     <div className="flex flex-col w-full px-4 gap-4 pb-24 pt-2">
-      {/* Dual Language & Quick Switch Banner */}
-      <div className="flex items-center justify-between bg-[#F2F3FF] rounded-2xl p-2.5 shadow-xs border border-[#E2E7FF]">
-        <div className="flex items-center gap-2">
-          <Languages className="w-4 h-4 text-[#00236F]" />
-          <span className="text-[11px] text-[#444651] font-bold uppercase tracking-wider">
-            {lang === 'te' ? 'భాష ఎంపిక / Interface' : 'Interface / భాష'}
-          </span>
-        </div>
-        <div className="flex items-center gap-1 bg-[#DAE2FD] p-0.5 rounded-full">
-          <button
-            type="button"
-            onClick={() => store.setLanguage('en')}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-              lang === 'en'
-                ? 'bg-[#00236F] text-white shadow-xs'
-                : 'text-[#444651] hover:text-[#131B2E]'
-            }`}
-          >
-            English
-          </button>
-          <button
-            type="button"
-            onClick={() => store.setLanguage('te')}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-              lang === 'te'
-                ? 'bg-[#00236F] text-white shadow-xs'
-                : 'text-[#444651] hover:text-[#131B2E]'
-            }`}
-          >
-            తెలుగు
-          </button>
-        </div>
-      </div>
 
       {/* Toast Feedback */}
       {toastMessage && (

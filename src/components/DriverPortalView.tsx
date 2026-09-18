@@ -253,17 +253,19 @@ export const DriverPortalView: React.FC<DriverPortalViewProps> = ({ lang }) => {
                   ? getTranslation(lang, 'gpsBroadcastActive')
                   : getTranslation(lang, 'statusReady')}
               </span>
-              <span className="text-[10px] opacity-80">
+              <span className="text-[10px] opacity-90">
                 {isTripActive
-                  ? getTranslation(lang, 'gpsBroadcastActiveSub')
+                  ? (lang === 'te'
+                    ? '📱 స్క్రీన్ వేక్-లాక్ ఆన్ (స్క్రీన్ ఆఫ్ కాదు) • నిరంతర ట్రాకింగ్'
+                    : '📱 Screen Wake Lock Active (Screen will not sleep) • Continuous GPS')
                   : 'ప్రారంభించడానికి సిద్ధంగా ఉంది'}
               </span>
             </div>
           </div>
 
           {isTripActive && (
-            <span className="bg-[#27C38A]/20 text-[#27C38A] text-[10px] px-2 py-0.5 rounded-full font-bold border border-[#27C38A]/30">
-              LIVE BROADCAST
+            <span className="bg-[#27C38A]/20 text-[#27C38A] text-[10px] px-2.5 py-1 rounded-full font-bold border border-[#27C38A]/30">
+              🟢 WAKE-LOCK ON
             </span>
           )}
         </div>

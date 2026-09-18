@@ -22,6 +22,9 @@ import {
   LocateFixed,
   Layers,
   Maximize2,
+  Minimize2,
+  ChevronUp,
+  ChevronDown,
   Loader2,
 } from 'lucide-react';
 import L from 'leaflet';
@@ -36,6 +39,7 @@ interface LiveMapViewProps {
 type MapLayerMode = 'google_roads' | 'google_satellite' | 'osm';
 
 export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
+  const liveMapWrapperRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const busMarkerRef = useRef<L.Marker | null>(null);
@@ -49,6 +53,8 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
   const [trafficActive, setTrafficActive] = useState(true);
   const [mapLayer, setMapLayer] = useState<MapLayerMode>('google_roads');
   const [isLocating, setIsLocating] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
@@ -474,407 +480,318 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
     }
   };
 
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (liveMapWrapperRef.current?.requestFullscreen) {
+        liveMapWrapperRef.current.requestFullscreen().catch(() => {});
+      } else if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 150);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
   return (
-    <div className="flex flex-col w-full relative select-none pb-20">
+    <div
+      ref={liveMapWrapperRef}
+      className={`relative w-full ${
+        isFullscreen ? 'h-screen' : 'h-[calc(100dvh-4.5rem-4rem)]'
+      } bg-[#E2E7FF] overflow-hidden select-none`}
+    >
       {/* Toast Notification Bar for Tactile Feedback */}
       {toastMessage && (
-        <div className="fixed top-22 left-1/2 -translate-x-1/2 z-50 bg-[#131B2E] text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 border border-[#E2E7FF]/20 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-22 left-1/2 -translate-x-1/2 z-50 bg-[#131B2E] text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-[#E2E7FF]/20 animate-in fade-in slide-in-from-top-2 duration-200">
           <CheckCircle className="w-4 h-4 text-[#4EDEA3]" />
           <span className="text-xs font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* Interactive Live Map Viewport Area */}
-      <div className="relative w-full h-[470px] sm:h-[520px] bg-[#E2E7FF] overflow-hidden shadow-inner">
-        {/* Leaflet Map Canvas */}
-        <div
-          ref={mapContainerRef}
-          className="w-full h-full z-0"
-          style={{ minHeight: '450px', height: '100%', width: '100%', position: 'relative' }}
-        />
+      {/* Leaflet Map Canvas - Full Edge-to-Edge */}
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full z-0 absolute inset-0"
+      />
 
-        {/* Floating Top Realtime Telemetry HUD Card */}
-        <div className="absolute top-3 left-3 right-3 z-20">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl p-3 flex flex-col gap-2 border border-[#E2E7FF]">
-            {/* Top Status Bar Row */}
-            <div className="flex items-center justify-between">
-              {/* Live GPS State Chip */}
-              <div className="flex items-center gap-1.5 bg-[#004A31]/10 text-[#004A31] px-3 py-1 rounded-full border border-[#004A31]/20">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#27C38A] animate-pulse" />
-                <div className="flex items-center gap-1 text-xs font-extrabold tracking-wide">
-                  <span>{getTranslation(lang, 'liveGpsPill')}</span>
-                  {liveLocation.isRealGps && (
-                    <span className="text-[10px] bg-[#27C38A]/20 px-1 rounded text-[#004A31]">
-                      HW
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Dynamic Age & Precision */}
-              <div className="flex items-center gap-1.5 text-[#444651] text-xs font-semibold">
-                <Radio className="w-3.5 h-3.5 text-[#4059AA] animate-pulse" />
-                <span>{getTranslation(lang, 'updatedAgo')} 4s ago</span>
-                <span className="text-[10px] bg-[#EAEDFF] text-[#00236F] px-1.5 py-0.5 rounded font-mono font-bold">
-                  ±3m
-                </span>
-              </div>
-            </div>
-
-            {/* Metric Split: Distance & ETA (High Contrast for Outdoor Sunlight) */}
-            <div className="grid grid-cols-2 gap-2 pt-0.5">
-              <div className="bg-[#F2F3FF] rounded-xl p-2.5 flex items-center gap-2.5 border border-[#E2E7FF]">
-                <div className="w-9 h-9 rounded-xl bg-[#1E3A8A] text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Navigation className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] text-[#444651] font-bold uppercase tracking-wider truncate">
-                    {getTranslation(lang, 'distance')}
-                  </span>
-                  <span className="text-lg font-black text-[#00236F] tracking-tight truncate">
-                    {liveLocation.distanceKm} km
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-[#FEA619]/15 rounded-xl p-2.5 flex items-center gap-2.5 border border-[#FEA619]/30">
-                <div className="w-9 h-9 rounded-xl bg-[#FEA619] text-[#684000] flex items-center justify-center shrink-0 shadow-xs">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] text-[#684000] font-bold uppercase tracking-wider truncate">
-                    {getTranslation(lang, 'eta')}
-                  </span>
-                  <span className="text-lg font-black text-[#855300] tracking-tight truncate">
-                    {liveLocation.etaMinutes} {getTranslation(lang, 'mins')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* User Distance Badge (Calculated in real-time when user location is known) */}
-            {userLocation && (
-              <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs text-[#1E3A8A] font-bold">
-                  <LocateFixed className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span>
-                    {lang === 'te' ? 'మీ స్థానం నుండి బస్సు దూరం' : 'Bus distance from you'}:
-                  </span>
-                </div>
-                <span className="text-xs font-black text-[#1E3A8A] bg-white px-2 py-0.5 rounded-md shadow-2xs">
-                  {calculateDistanceKm(userLocation.lat, userLocation.lng, liveLocation.lat, liveLocation.lng)} km
-                </span>
-              </div>
-            )}
-
-            {/* Micro Status Progress Ribbon */}
-            <div className="flex items-center justify-between px-1 pt-0.5 text-xs">
-              <div className="flex items-center gap-1.5 text-[#131B2E] font-semibold truncate">
-                <CheckCircle className="w-3.5 h-3.5 text-[#004A31] shrink-0" />
-                <span className="truncate">
-                  {getTranslation(lang, 'nextStop')}:{' '}
-                  <strong>{pickupPoint?.name || 'Sadvik Pickup (Main Rd)'}</strong>
-                </span>
-              </div>
-              <span className="text-[10px] bg-[#EAEDFF] text-[#00236F] px-2 py-0.5 rounded-full font-bold shrink-0">
-                Stop #03
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Floating Map Control FAB Stack (Right Edge) */}
-        <div className="absolute right-3 bottom-6 z-20 flex flex-col gap-2">
-          {/* 📍 My Location Button (Dedicated Device GPS Finder) */}
-          <button
-            type="button"
-            onClick={() => handleLocateUser(true)}
-            disabled={isLocating}
-            className={`w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border ${
-              userLocation
-                ? 'bg-[#2563EB] text-white border-[#1E3A8A] ring-2 ring-[#93C5FD]'
-                : 'bg-white text-[#2563EB] border-[#E2E7FF] hover:bg-blue-50'
-            }`}
-            title={lang === 'te' ? 'నా ప్రస్తుత లొకేషన్ చూపించు' : 'Find My Current Location'}
-            aria-label="My Location"
-          >
-            {isLocating ? (
-              <Loader2 className="w-6 h-6 animate-spin text-[#2563EB]" />
-            ) : (
-              <LocateFixed className="w-6 h-6" />
-            )}
-          </button>
-
-          {/* 🎯 Recenter Live Bus Location */}
-          <button
-            type="button"
-            onClick={handleRecenterBus}
-            className="w-12 h-12 rounded-2xl bg-white text-[#00236F] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
-            title={getTranslation(lang, 'centerBus')}
-            aria-label={getTranslation(lang, 'centerBus')}
-          >
-            <Crosshair className="w-6 h-6" />
-          </button>
-
-          {/* 🔲 Fit All Bounds (User + Bus + School) */}
-          <button
-            type="button"
-            onClick={handleFitAll}
-            className="w-12 h-12 rounded-2xl bg-white text-[#444651] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
-            title={lang === 'te' ? 'మొత్తం రూట్ సర్దుబాటు చేయి' : 'Fit Entire Route'}
-            aria-label="Fit All"
-          >
-            <Maximize2 className="w-5 h-5" />
-          </button>
-
-          {/* 🗺️ Map Layer Switcher (Roads / Satellite / OSM) */}
-          <button
-            type="button"
-            onClick={() => {
-              if (mapLayer === 'google_roads') switchMapLayer('google_satellite');
-              else if (mapLayer === 'google_satellite') switchMapLayer('osm');
-              else switchMapLayer('google_roads');
-            }}
-            className={`w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] ${
-              mapLayer === 'google_satellite'
-                ? 'bg-[#00236F] text-white'
-                : 'bg-white text-[#444651] hover:bg-gray-50'
-            }`}
-            title={
-              mapLayer === 'google_roads'
-                ? 'Map: Roads'
-                : mapLayer === 'google_satellite'
-                ? 'Map: Satellite'
-                : 'Map: OpenStreetMap'
-            }
-            aria-label="Toggle Map Layer"
-          >
-            <Layers className="w-5 h-5" />
-          </button>
-
-          {/* ➕ Zoom In Control */}
-          <button
-            type="button"
-            onClick={() => handleZoom(1)}
-            className="w-12 h-12 rounded-2xl bg-white text-[#131B2E] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
-            aria-label={getTranslation(lang, 'zoomIn')}
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-
-          {/* 🚗 Traffic Layer Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleTraffic}
-            className={`w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] ${
-              trafficActive ? 'bg-[#FEA619] text-[#684000]' : 'bg-white text-[#444651]'
-            }`}
-            aria-label={getTranslation(lang, 'trafficLayer')}
-          >
-            <Car className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Draggable Bottom Sheet Card Panel */}
-      <div className="w-full bg-white rounded-t-3xl shadow-2xl px-4 pt-3 pb-8 -mt-5 relative z-30 flex flex-col gap-3.5 border-t border-[#E2E7FF]">
-        {/* Tactile Drag Handle */}
-        <div className="w-12 h-1.5 rounded-full bg-[#C5C5D3] self-center mb-0.5" />
-
-        {/* Bus & Driver Primary Credentials Section */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0">
-              <img
-                src={driver?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120'}
-                alt={driver?.name}
-                className="w-12 h-12 rounded-2xl object-cover shadow-xs border-2 border-[#EAEDFF]"
-              />
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#004A31] text-white flex items-center justify-center ring-2 ring-white">
-                <Check className="w-3 h-3 text-[#4EDEA3]" />
-              </div>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-base font-bold text-[#131B2E] truncate">
-                  {lang === 'te' ? driver?.nameTe : driver?.name}
-                </span>
-                <span className="text-xs bg-[#FFDDB8] text-[#2A1700] px-2 py-0.5 rounded-full font-bold shrink-0">
-                  {bus?.busNumber || 'BUS-07'}
-                </span>
-              </div>
-              <span className="text-xs text-[#444651] truncate">
-                {lang === 'te' ? 'రవి కుమార్ • 12 సం. అనుభవం' : `${driver?.name} • 12 Yrs Safe Driving`}
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Phone Direct Dialer */}
-          <a
-            href={`tel:${driver?.phone || '+919876543210'}`}
-            className="w-11 h-11 rounded-2xl bg-[#00236F] text-white flex items-center justify-center shadow-md active:scale-90 transition-transform shrink-0"
-            aria-label="Call Driver"
-          >
-            <Phone className="w-5 h-5" />
-          </a>
-        </div>
-
-        {/* Telematics Context Ribbon */}
-        <div className="bg-[#F2F3FF] rounded-2xl p-3 flex flex-col gap-2.5 border border-[#E2E7FF]">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#E2E7FF] text-[#00236F] flex items-center justify-center shrink-0 mt-0.5">
-              <MapPin className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#444651]">
-                {getTranslation(lang, 'currentLocation')}
-              </span>
-              <span className="text-sm font-bold text-[#131B2E] truncate">
-                {lang === 'te' ? liveLocation.locationNameTe : liveLocation.locationName}
-              </span>
-              <span className="text-xs text-[#444651]">
-                {lang === 'te' ? 'గచ్చిబౌలి ఔటర్ రింగ్ రోడ్ మార్గం' : 'Outer Ring Road, Gachibowli Corridor'}
-              </span>
-            </div>
-          </div>
-
-          {/* Telematics Row: Speed, Congestion, On Board */}
-          <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#E2E7FF]/70">
-            <div className="bg-white rounded-xl p-2 flex flex-col items-center text-center shadow-2xs border border-[#E2E7FF]">
-              <span className="text-[10px] text-[#444651] font-semibold">
-                {getTranslation(lang, 'speed')}
-              </span>
-              <span className="text-base font-extrabold text-[#131B2E]">
-                {liveLocation.speed}{' '}
-                <span className="text-[10px] font-normal text-[#444651]">km/h</span>
-              </span>
-              <span className="text-[9px] font-bold text-[#004A31]">
-                {getTranslation(lang, 'normalPace')}
-              </span>
-            </div>
-
-            <div className="bg-white rounded-xl p-2 flex flex-col items-center text-center shadow-2xs border border-[#E2E7FF]">
-              <span className="text-[10px] text-[#444651] font-semibold">
-                {getTranslation(lang, 'traffic')}
-              </span>
-              <span className="text-base font-extrabold text-[#855300]">
-                {getTranslation(lang, 'moderateTraffic')}
-              </span>
-              <span className="text-[9px] font-bold text-[#855300]">+2 min delay</span>
-            </div>
-
-            <div className="bg-white rounded-xl p-2 flex flex-col items-center text-center shadow-2xs border border-[#E2E7FF]">
-              <span className="text-[10px] text-[#444651] font-semibold">
-                {getTranslation(lang, 'onBoard')}
-              </span>
-              <span className="text-base font-extrabold text-[#00236F]">18/24</span>
-              <span className="text-[9px] font-bold text-[#444651]">Attendant On</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Student Status Pill Banner */}
-        <div className="bg-[#FFDDB8]/40 rounded-2xl p-2.5 flex items-center justify-between border border-[#FFDDB8]">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              src={student?.photoUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=120'}
-              alt={student?.name}
-              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-[#FEA619]"
-            />
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-[#131B2E] truncate">
-                  {lang === 'te' ? student?.nameTe : student?.name}
-                </span>
-                <span className="text-[10px] bg-[#FEA619] text-[#684000] px-1.5 py-0.2 rounded font-bold">
-                  Class 1-A
-                </span>
-              </div>
-              <span className="text-[11px] text-[#855300] font-semibold truncate">
-                {lang === 'te'
-                  ? `స్థితి: ${student?.status === 'At Stop' ? 'స్టాప్ వద్ద ఉన్నారు' : 'పికప్ కొరకు వేచివున్నారు'}`
-                  : `Status: ${student?.status || 'Awaiting Bus'}`}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleAtStopAlert}
-            className={`h-9 px-3 rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center gap-1 shrink-0 ${
-              student?.status === 'At Stop'
-                ? 'bg-[#004A31] text-white'
-                : 'bg-[#FEA619] text-[#684000] hover:bg-[#FEA619]/90'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>{student?.status === 'At Stop' ? 'Reported' : getTranslation(lang, 'atStop')}</span>
-          </button>
-        </div>
-
-        {/* Operational Primary Action CTAs */}
-        <div className="grid grid-cols-2 gap-2 pt-0.5">
-          {/* Call Transport Office Desk */}
-          <a
-            href={`tel:${store.schoolInfo.phone}`}
-            className="h-12 rounded-xl bg-[#EAEDFF] text-[#00236F] font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform border border-[#C5C5D3]/40"
-          >
-            <Headphones className="w-4 h-4 text-[#00236F]" />
-            <div className="flex flex-col text-left leading-tight">
-              <span>{getTranslation(lang, 'transportDesk')}</span>
-              <span className="text-[9px] font-bold text-[#00236F]">{store.schoolInfo.phone}</span>
-            </div>
-          </a>
-
-          {/* Report Route Delay / SOS Feedback */}
-          <button
-            type="button"
-            onClick={() => setReportModalOpen(true)}
-            className="h-12 rounded-xl bg-[#00236F] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
-          >
-            <AlertTriangle className="w-4 h-4 text-[#FEA619]" />
-            <div className="flex flex-col text-left leading-tight">
-              <span>{getTranslation(lang, 'reportIssue')}</span>
-              <span className="text-[9px] font-normal text-[#B6C4FF]">
-                {lang === 'te' ? 'సమస్య తెలపండి' : 'Transit Feedback'}
-              </span>
-            </div>
-          </button>
-        </div>
-
-        {/* Real Live GPS Telematics Ribbon */}
-        <div className="flex items-center justify-between pt-1 border-t border-[#E2E7FF]/70 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP'
-                  ? 'bg-[#004A31] animate-pulse'
-                  : 'bg-blue-600'
-              }`}
-            />
-            <span className="font-extrabold text-[#131B2E]">
-              {bus?.status === 'MORNING_TRIP' || bus?.status === 'RETURN_TRIP'
-                ? lang === 'te'
-                  ? 'లైవ్ ట్రిప్ నడుస్తోంది'
-                  : 'Live Trip in Progress'
-                : lang === 'te'
-                ? 'బస్సు క్యాంపస్ వద్ద ఉంది'
-                : 'Bus Parked at School'}
+      {/* Slim Floating Top Telemetry Pill (~42px Height) */}
+      <div className="absolute top-2.5 left-2.5 right-2.5 sm:left-4 sm:right-4 z-20 max-w-lg mx-auto">
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg px-3 py-2 flex items-center justify-between border border-[#E2E7FF]">
+          {/* Bus Number & Distance / ETA */}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-xs font-black text-[#00236F] bg-[#EAEDFF] px-2 py-0.5 rounded-lg shrink-0">
+              {bus?.busNumber || 'BUS-07'}
+            </span>
+            <span className="text-xs font-bold text-[#131B2E] truncate">
+              {liveLocation.distanceKm} km • {liveLocation.etaMinutes} {getTranslation(lang, 'mins')}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* My Location Button */}
-            <button
-              type="button"
-              onClick={() => handleLocateUser(true)}
-              className="h-7 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 bg-[#EAEDFF] text-[#00236F] hover:bg-[#DAE2FD] transition-colors active:scale-95"
-              title={lang === 'te' ? 'నా ప్రస్తుత స్థానం' : 'My Location'}
-            >
-              <LocateFixed className="w-3 h-3 text-[#00236F]" />
-              <span>{lang === 'te' ? 'నా స్థానం' : 'My Location'}</span>
-            </button>
+          {/* Speed & HW GPS Chip */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-xs font-black text-[#00236F] bg-[#F2F3FF] px-2 py-0.5 rounded-full border border-[#E2E7FF]">
+              {liveLocation.speed} <span className="text-[10px] font-normal text-[#444651]">km/h</span>
+            </span>
+            {liveLocation.isRealGps && (
+              <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300/40">
+                HW GPS
+              </span>
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* Floating Map Control FAB Stack (Right Edge) */}
+      <div className="absolute right-2.5 bottom-20 sm:bottom-22 z-20 flex flex-col gap-2">
+        {/* ⛶ Native Fullscreen Toggle */}
+        <button
+          type="button"
+          onClick={handleToggleFullscreen}
+          className={`w-11 h-11 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] ${
+            isFullscreen ? 'bg-[#00236F] text-white' : 'bg-white text-[#00236F] hover:bg-gray-50'
+          }`}
+          title={lang === 'te' ? 'పూర్తి స్క్రీన్ (Full Screen)' : 'Full Screen'}
+          aria-label="Toggle Fullscreen"
+        >
+          {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+        </button>
+
+        {/* 📍 My Location Button */}
+        <button
+          type="button"
+          onClick={() => handleLocateUser(true)}
+          disabled={isLocating}
+          className={`w-11 h-11 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border ${
+            userLocation
+              ? 'bg-[#2563EB] text-white border-[#1E3A8A] ring-2 ring-[#93C5FD]'
+              : 'bg-white text-[#2563EB] border-[#E2E7FF] hover:bg-blue-50'
+          }`}
+          title={lang === 'te' ? 'నా ప్రస్తుత లొకేషన్ చూపించు' : 'Find My Current Location'}
+          aria-label="My Location"
+        >
+          {isLocating ? (
+            <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" />
+          ) : (
+            <LocateFixed className="w-5 h-5" />
+          )}
+        </button>
+
+        {/* 🎯 Recenter Live Bus Location */}
+        <button
+          type="button"
+          onClick={handleRecenterBus}
+          className="w-11 h-11 rounded-2xl bg-white text-[#00236F] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
+          title={getTranslation(lang, 'centerBus')}
+          aria-label={getTranslation(lang, 'centerBus')}
+        >
+          <Crosshair className="w-5 h-5" />
+        </button>
+
+        {/* 🔲 Fit Entire Route */}
+        <button
+          type="button"
+          onClick={handleFitAll}
+          className="w-11 h-11 rounded-2xl bg-white text-[#444651] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
+          title={lang === 'te' ? 'మొత్తం రూట్ సర్దుబాటు చేయి' : 'Fit Entire Route'}
+          aria-label="Fit All"
+        >
+          <Navigation className="w-5 h-5" />
+        </button>
+
+        {/* 🗺️ Map Layer Switcher */}
+        <button
+          type="button"
+          onClick={() => {
+            if (mapLayer === 'google_roads') switchMapLayer('google_satellite');
+            else if (mapLayer === 'google_satellite') switchMapLayer('osm');
+            else switchMapLayer('google_roads');
+          }}
+          className={`w-11 h-11 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] ${
+            mapLayer === 'google_satellite'
+              ? 'bg-[#00236F] text-white'
+              : 'bg-white text-[#444651] hover:bg-gray-50'
+          }`}
+          title="Switch Map Layer"
+          aria-label="Toggle Map Layer"
+        >
+          <Layers className="w-5 h-5" />
+        </button>
+
+        {/* ➕ Zoom In */}
+        <button
+          type="button"
+          onClick={() => handleZoom(1)}
+          className="w-11 h-11 rounded-2xl bg-white text-[#131B2E] shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] hover:bg-gray-50"
+          aria-label={getTranslation(lang, 'zoomIn')}
+        >
+          <Plus className="w-5 h-5" />
+        </button>
+
+        {/* 🚗 Traffic Overlay */}
+        <button
+          type="button"
+          onClick={handleToggleTraffic}
+          className={`w-11 h-11 rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform border border-[#E2E7FF] ${
+            trafficActive ? 'bg-[#FEA619] text-[#684000]' : 'bg-white text-[#444651]'
+          }`}
+          aria-label={getTranslation(lang, 'trafficLayer')}
+        >
+          <Car className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Compact Collapsible Bottom Sheet (~56px Collapsed) */}
+      <div className="absolute bottom-2 left-2 right-2 sm:left-4 sm:right-4 z-20 max-w-lg mx-auto">
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-[#E2E7FF] overflow-hidden transition-all duration-300">
+          {/* Header Bar */}
+          <div className="p-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative shrink-0">
+                <img
+                  src={driver?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120'}
+                  alt={driver?.name}
+                  className="w-10 h-10 rounded-xl object-cover border border-[#EAEDFF]"
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#004A31] text-white flex items-center justify-center ring-1 ring-white">
+                  <Check className="w-2.5 h-2.5 text-[#4EDEA3]" />
+                </div>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#131B2E] truncate">
+                    {lang === 'te' ? driver?.nameTe : driver?.name}
+                  </span>
+                  <span className="text-[10px] bg-[#FFDDB8] text-[#2A1700] px-1.5 py-0.2 rounded font-bold shrink-0">
+                    {bus?.busNumber || 'BUS-07'}
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#444651] truncate">
+                  {lang === 'te' ? 'స్టేషన్ ఘన్‌పూర్ రూట్' : 'Station Ghanpur Route'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Call Driver */}
+              <a
+                href={`tel:${driver?.phone || '+919951044459'}`}
+                className="w-9 h-9 rounded-xl bg-[#00236F] text-white flex items-center justify-center shadow-xs active:scale-95 transition-transform"
+                title={lang === 'te' ? 'డ్రైవర్‌కు కాల్ చేయండి' : 'Call Driver'}
+              >
+                <Phone className="w-4 h-4" />
+              </a>
+
+              {/* Toggle Details Chevron */}
+              <button
+                type="button"
+                onClick={() => setDetailsExpanded((prev) => !prev)}
+                className="h-9 px-2.5 rounded-xl bg-[#EAEDFF] hover:bg-[#DAE2FD] text-[#00236F] font-bold text-xs flex items-center gap-1 transition-all active:scale-95"
+              >
+                <span>
+                  {detailsExpanded
+                    ? lang === 'te'
+                      ? 'మూసివేయి'
+                      : 'Close'
+                    : lang === 'te'
+                    ? 'వివరాలు'
+                    : 'Details'}
+                </span>
+                {detailsExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Drawer Details */}
+          {detailsExpanded && (
+            <div className="px-3 pb-3 pt-1 border-t border-[#E2E7FF] flex flex-col gap-2 max-h-[50vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-150">
+              {/* Location Route (Station Ghanpur corridor, no old Gachibowli text) */}
+              <div className="flex items-center gap-2 bg-[#F2F3FF] p-2 rounded-xl text-xs">
+                <MapPin className="w-4 h-4 text-[#00236F] shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-[#131B2E] truncate">
+                    {lang === 'te' ? liveLocation.locationNameTe : liveLocation.locationName}
+                  </span>
+                  <span className="text-[10px] text-[#444651]">
+                    {lang === 'te' ? 'స్టేషన్ ఘన్‌పూర్ - జనగాం రూట్' : 'Station Ghanpur - Jangaon Route'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Student Status & At Stop alert */}
+              <div className="bg-[#FFDDB8]/40 rounded-xl p-2 flex items-center justify-between border border-[#FFDDB8]">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-bold text-[#131B2E] truncate">
+                    {lang === 'te' ? student?.nameTe : student?.name} (Class 1-A)
+                  </span>
+                  <span className="text-[10px] text-[#855300] font-semibold">
+                    {lang === 'te'
+                      ? `స్థితి: ${student?.status === 'At Stop' ? 'స్టాప్ వద్ద ఉన్నారు' : 'వేచివున్నారు'}`
+                      : `Status: ${student?.status || 'Awaiting Bus'}`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAtStopAlert}
+                  className={`h-8 px-2.5 rounded-lg font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center gap-1 shrink-0 ${
+                    student?.status === 'At Stop'
+                      ? 'bg-[#004A31] text-white'
+                      : 'bg-[#FEA619] text-[#684000]'
+                  }`}
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>{student?.status === 'At Stop' ? 'Reported' : getTranslation(lang, 'atStop')}</span>
+                </button>
+              </div>
+
+              {/* Telematics stats (Speed, Traffic, OnBoard) */}
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div className="bg-[#F2F3FF] rounded-lg p-1.5 border border-[#E2E7FF]">
+                  <span className="text-[9px] text-[#444651] block">{getTranslation(lang, 'speed')}</span>
+                  <span className="text-xs font-black text-[#131B2E]">{liveLocation.speed} km/h</span>
+                </div>
+                <div className="bg-[#F2F3FF] rounded-lg p-1.5 border border-[#E2E7FF]">
+                  <span className="text-[9px] text-[#444651] block">{getTranslation(lang, 'traffic')}</span>
+                  <span className="text-xs font-black text-[#855300]">{getTranslation(lang, 'moderateTraffic')}</span>
+                </div>
+                <div className="bg-[#F2F3FF] rounded-lg p-1.5 border border-[#E2E7FF]">
+                  <span className="text-[9px] text-[#444651] block">{getTranslation(lang, 'onBoard')}</span>
+                  <span className="text-xs font-black text-[#00236F]">18/24</span>
+                </div>
+              </div>
+
+              {/* Action Buttons: Transport Desk & Report Issue */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <a
+                  href={`tel:${store.schoolInfo.phone}`}
+                  className="h-10 rounded-xl bg-[#EAEDFF] text-[#00236F] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <Headphones className="w-3.5 h-3.5" />
+                  <span>{getTranslation(lang, 'transportDesk')}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setReportModalOpen(true)}
+                  className="h-10 rounded-xl bg-[#00236F] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-transform"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#FEA619]" />
+                  <span>{getTranslation(lang, 'reportIssue')}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

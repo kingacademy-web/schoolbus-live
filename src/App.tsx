@@ -10,6 +10,7 @@ import { AdminFleetView } from './components/AdminFleetView';
 import { AlertsView } from './components/AlertsView';
 import { ProfileSettingsView } from './components/ProfileSettingsView';
 import { StaffAuthModal } from './components/StaffAuthModal';
+import { SettingsModal } from './components/SettingsModal';
 import { AlertTriangle, WifiOff, X } from 'lucide-react';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
   const [acknowledgedEmergency, setAcknowledgedEmergency] = useState(false);
   const [staffAuthModalOpen, setStaffAuthModalOpen] = useState(false);
   const [staffAuthTargetRole, setStaffAuthTargetRole] = useState<'DRIVER' | 'ADMIN'>('DRIVER');
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // Re-render when store updates
   useEffect(() => {
@@ -96,6 +98,9 @@ export default function App() {
         unreadCount={unreadAlerts}
         gpsMode={store.gpsMode}
         onLogout={handleLogout}
+        onOpenSettings={() => setSettingsModalOpen(true)}
+        onOpenStaffLogin={(targetRole) => handleOpenStaffAuth(targetRole)}
+        onEditProfile={() => setCurrentTab('profile')}
       />
 
       {/* Offline Status Warning Ribbon */}
@@ -130,7 +135,7 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-lg mx-auto pt-18">
+      <main className={`flex-1 w-full ${currentTab === 'live' ? 'max-w-none' : 'max-w-lg'} mx-auto pt-18 pb-16`}>
         {currentTab === 'home' && (
           <ParentHomeView
             lang={lang}
@@ -183,6 +188,13 @@ export default function App() {
         initialRole={staffAuthTargetRole}
         lang={lang}
         onSuccess={handleStaffAuthSuccess}
+      />
+
+      {/* Application Settings Modal (Language, Geofence, Security) */}
+      <SettingsModal
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        lang={lang}
       />
     </div>
   );
