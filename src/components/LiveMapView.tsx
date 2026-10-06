@@ -61,7 +61,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
     accuracy: number;
   } | null>(null);
 
-  // Subscribe to reactive store updates (so hardware GPS, driver updates, simulation move smoothly)
+  // Subscribe to reactive store updates (so hardware GPS, driver updates, and cloud sync move smoothly)
   const [, setTick] = useState(0);
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
@@ -294,17 +294,22 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
       });
       L.marker([17.8580, 79.3175], { icon: schoolIcon }).addTo(map);
 
-      // 2. Pickup Point Marker (Sadvik Stop) + 500m Safety Perimeter Circle
+      // 2. Pickup Point Marker + Safety Perimeter Geofence Circle
       if (pickupPoint) {
+        const studentDisplayName = student ? (lang === 'te' ? student.nameTe : student.name) : '';
+        const pickupLabel = studentDisplayName
+          ? `${studentDisplayName} ${lang === 'te' ? 'పికప్' : 'Pickup'}`
+          : (lang === 'te' ? pickupPoint.nameTe : pickupPoint.name);
+
         const pickupIcon = L.divIcon({
           className: 'custom-pickup-marker',
           html: `
             <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -100%);">
               <div style="background:#FEA619; color:#684000; box-shadow: 0 6px 16px rgba(254,166,25,0.35); border-radius:12px; padding:4px 8px; font-size:11px; font-weight:800; display:flex; align-items:center; gap:4px; white-space:nowrap;">
-                <span>👶 Sadvik Pickup</span>
+                <span>👶 ${pickupLabel}</span>
               </div>
               <div style="background:rgba(255,255,255,0.9); backdrop-filter:blur(4px); color:#855300; font-size:9px; font-weight:bold; padding:1px 6px; border-radius:99px; margin-top:2px; box-shadow:0 1px 4px rgba(0,0,0,0.1);">
-                500M ZONE
+                ${pickupPoint.geofenceRadiusMeters || 500}M ZONE
               </div>
               <div style="width:34px; height:34px; background:#855300; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(0,0,0,0.3); margin-top:2px; border:2px solid white;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -316,7 +321,7 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         });
         L.marker([pickupPoint.lat, pickupPoint.lng], { icon: pickupIcon }).addTo(map);
 
-        // 500m Safety Perimeter Geofence Circle
+        // Safety Perimeter Geofence Circle
         const circle = L.circle([pickupPoint.lat, pickupPoint.lng], {
           radius: pickupPoint.geofenceRadiusMeters || 500,
           color: '#FEA619',
@@ -333,8 +338,8 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
         [17.8450, 79.3010], // Jangaon-Ghanpur Highway approach
         [17.8485, 79.3060], // Bypass Junction
         [17.8510, 79.3090], // Town Entry
-        [17.8518, 79.3105], // 500m zone entry
-        [17.8520, 79.3110], // Sadvik Pickup Stop
+        [17.8518, 79.3105], // Geofence zone entry
+        [17.8520, 79.3110], // Primary Student Pickup Stop
         [17.8545, 79.3135], // Railway Station Road
         [17.8580, 79.3175], // Sri Chaitanya School Campus
       ];
@@ -472,10 +477,11 @@ export const LiveMapView: React.FC<LiveMapViewProps> = ({ lang }) => {
   const handleAtStopAlert = () => {
     if (student) {
       store.updateStudentStatus(student.id, 'At Stop');
+      const studentDisplayName = lang === 'te' ? (student.nameTe || student.name) : student.name;
       showToast(
         lang === 'te'
-          ? 'డ్రైవర్‌కు నోటిఫికేషన్ వెళ్ళింది: సాద్విక్ స్టాప్ వద్ద ఉన్నారు!'
-          : 'Driver alerted: Sadvik is waiting at stop!',
+          ? `డ్రైవర్‌కు నోటిఫికేషన్ వెళ్ళింది: ${studentDisplayName} స్టాప్ వద్ద ఉన్నారు!`
+          : `Driver alerted: ${studentDisplayName} is waiting at stop!`,
       );
     }
   };

@@ -113,11 +113,11 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const handleResetData = () => {
     const confirmMessage =
       lang === 'te'
-        ? 'మీరు నిజంగా అన్ని వివరాలను (విద్యార్థులు, డ్రైవర్లు, బస్సులు, పాఠశాల సమాచారం) మొదటి డెమో స్థితికి రీసెట్ చేయాలనుకుంటున్నారా?'
-        : 'Are you sure you want to reset all modified data (students, drivers, buses, school info) back to factory demo defaults?';
+        ? 'మీరు నిజంగా అన్ని వివరాలను పాఠశాల అధికారిక డిఫాల్ట్ స్థితికి రీసెట్ చేయాలనుకుంటున్నారా?'
+        : 'Are you sure you want to reset all modified data (students, drivers, buses, school info) back to official school defaults?';
     if (window.confirm(confirmMessage)) {
       store.resetAllToDefault();
-      showToast(lang === 'te' ? 'అన్ని వివరాలు డెమో స్థితికి రీసెట్ చేయబడ్డాయి!' : 'All data reset to factory demo defaults!');
+      showToast(lang === 'te' ? 'అన్ని వివరాలు అధికారిక డిఫాల్ట్ స్థితికి రీసెట్ చేయబడ్డాయి!' : 'All data reset to official school defaults!');
     }
   };
 
@@ -450,59 +450,26 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         )}
       </div>
 
-      {/* GPS Engine Mode (LIVE vs DEMO) */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E7FF] space-y-3">
+      {/* Official Real GPS Engine Status */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E7FF] space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-[#00236F]" />
             <span className="text-xs font-bold text-[#131B2E]">
-              {lang === 'te' ? 'జీపీఎస్ ఇంజిన్ మోడ్' : 'GPS Engine Mode'}
+              {lang === 'te' ? 'జీపీఎస్ ఇంజిన్' : 'GPS Engine'}
             </span>
           </div>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-              store.gpsMode === 'LIVE'
-                ? 'bg-[#004A31] text-emerald-100'
-                : 'bg-amber-100 text-amber-900'
-            }`}
-          >
-            {store.gpsMode === 'LIVE' ? 'LIVE GPS ACTIVE' : 'DEMO SIMULATION'}
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#004A31] text-emerald-100 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4EDEA3] animate-pulse" />
+            {lang === 'te' ? 'లైవ్ జీపీఎస్ యాక్టివ్' : 'LIVE GPS ACTIVE'}
           </span>
         </div>
 
         <p className="text-[11px] text-[#444651] leading-relaxed">
-          {store.gpsMode === 'LIVE'
-            ? 'Using real hardware navigator.geolocation.watchPosition with high accuracy, adaptive throttling (3s/5s/10s), and Firebase Realtime Database.'
-            : 'Using animated demo simulation along Ghanpur route to Sri Chaitanya School campus for testing without real road movement.'}
+          {lang === 'te'
+            ? 'శ్రీ చైతన్య స్కూల్ బస్సు లైవ్ లొకేషన్ మొబైల్ హార్డ్‌వేర్ జీపీఎస్ మరియు ఫైర్‌బేస్ రియల్‌టైమ్ క్లౌడ్ ద్వారా నేరుగా అప్‌డేట్ అవుతుంది.'
+            : 'Sri Chaitanya school bus live tracking operates directly via device mobile hardware GPS and Firebase Realtime Database.'}
         </p>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => store.setGpsMode('LIVE')}
-            className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all ${
-              store.gpsMode === 'LIVE'
-                ? 'bg-[#004A31] text-white border-[#004A31] shadow-xs'
-                : 'bg-[#F2F3FF] text-[#131B2E] border-[#E2E7FF] hover:bg-gray-100'
-            }`}
-          >
-            <span>🛰️ Live GPS</span>
-            {store.gpsMode === 'LIVE' && <Check className="w-3.5 h-3.5 text-[#4EDEA3]" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => store.setGpsMode('DEMO')}
-            className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all ${
-              store.gpsMode === 'DEMO'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                : 'bg-[#F2F3FF] text-[#131B2E] border-[#E2E7FF] hover:bg-gray-100'
-            }`}
-          >
-            <span>🎮 Demo Sim</span>
-            {store.gpsMode === 'DEMO' && <Check className="w-3.5 h-3.5 text-amber-200" />}
-          </button>
-        </div>
       </div>
 
       {/* Proximity Notification Preferences */}
@@ -619,7 +586,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Data Management: Reset to Factory Demo */}
+      {/* Data Management: Reset to Official School Defaults */}
       <div className="bg-white rounded-2xl p-4 border border-[#E2E7FF] space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -634,8 +601,8 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         </div>
         <p className="text-[11px] text-[#757682]">
           {lang === 'te'
-            ? 'మీరు ఎడిట్ చేసిన వివరాలన్నీ మీ బ్రౌజర్‌లో సురక్షితంగా సేవ్ చేయబడతాయి. మళ్లీ మొదట ఉన్న డెమో డేటా కావాలంటే రీసెట్ చేయవచ్చు.'
-            : 'All your customized edits are saved locally. You can restore default demo data at any time.'}
+            ? 'మీరు మార్పులు చేసిన వివరాలు మీ బ్రౌజర్‌లో సేవ్ చేయబడతాయి. అవసరమైతే పాఠశాల అధికారిక డిఫాల్ట్ వివరాలకు రీసెట్ చేసుకోవచ్చు.'
+            : 'All your customized edits are saved locally. You can restore official school defaults at any time.'}
         </p>
         <button
           type="button"
@@ -643,7 +610,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           className="w-full mt-1 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>{lang === 'te' ? 'డిఫాల్ట్ డెమో డేటాకు రీసెట్ చేయండి' : 'Reset All to Factory Demo Data'}</span>
+          <span>{lang === 'te' ? 'అధికారిక పాఠశాల వివరాలకు రీసెట్ చేయండి' : 'Reset to Official School Defaults'}</span>
         </button>
       </div>
 

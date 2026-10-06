@@ -20,7 +20,6 @@ interface HeaderProps {
   onOpenProfile: () => void;
   onOpenAlerts: () => void;
   unreadCount: number;
-  gpsMode?: 'LIVE' | 'DEMO';
   onLogout?: () => void;
   onOpenSettings: () => void;
   onOpenStaffLogin: (role: 'DRIVER' | 'ADMIN') => void;
@@ -33,7 +32,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onOpenAlerts,
   unreadCount,
-  gpsMode = store.gpsMode,
   onLogout,
   onOpenSettings,
   onOpenStaffLogin,

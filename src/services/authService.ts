@@ -1,4 +1,4 @@
-// User Authentication Service supporting Firebase Auth and Dev Demo Access
+// User Authentication Service supporting Firebase Auth and Official School Portal Access
 import { auth, isFirebaseConfigured, db } from './firebase';
 import {
   signInWithEmailAndPassword,
@@ -9,15 +9,50 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserAccount, UserRole, Language } from '../types';
 
-const DEMO_ACCOUNTS: Record<string, UserAccount> = {
+const OFFICIAL_ACCOUNTS: Record<string, UserAccount> = {
+  'parent@srichaitanya.school': {
+    id: 'user_parent_01',
+    name: 'A. Srinivas (Parent)',
+    nameTe: 'ఎ. శ్రీనివాస్ (తల్లిదండ్రులు)',
+    email: 'parent@srichaitanya.school',
+    phone: '+91 99510 44459',
+    role: 'PARENT',
+    language: 'te',
+    status: 'active',
+    linkedStudentIds: ['std_sadvik', 'std_ananya'],
+    selectedChildId: 'std_sadvik',
+  },
+  'driver@srichaitanya.school': {
+    id: 'user_driver_01',
+    name: 'Ravi Kumar (Bus Driver)',
+    nameTe: 'రవి కుమార్ (బస్సు #07 పైలట్)',
+    email: 'driver@srichaitanya.school',
+    phone: '+91 99510 44469',
+    role: 'DRIVER',
+    language: 'te',
+    status: 'active',
+    assignedBusId: 'bus_07',
+    licenseNo: 'DL-TG09201488219',
+  },
+  'admin@srichaitanya.school': {
+    id: 'user_admin_01',
+    name: 'Sri Chaitanya Administrator',
+    nameTe: 'శ్రీ చైతన్య రవాణా అధికారి',
+    email: 'admin@srichaitanya.school',
+    phone: '+91 99510 44459',
+    role: 'ADMIN',
+    language: 'te',
+    status: 'active',
+  },
+  // Backward compatibility aliases
   'parent@schoolbus.live': {
     id: 'user_parent_01',
-    name: 'Sadvik Sharma (Parent)',
-    nameTe: 'సాద్విక్ శర్మ (తల్లిదండ్రులు)',
-    email: 'parent@schoolbus.live',
-    phone: '+91 99887 76655',
+    name: 'A. Srinivas (Parent)',
+    nameTe: 'ఎ. శ్రీనివాస్ (తల్లిదండ్రులు)',
+    email: 'parent@srichaitanya.school',
+    phone: '+91 99510 44459',
     role: 'PARENT',
-    language: 'en',
+    language: 'te',
     status: 'active',
     linkedStudentIds: ['std_sadvik', 'std_ananya'],
     selectedChildId: 'std_sadvik',
@@ -25,23 +60,23 @@ const DEMO_ACCOUNTS: Record<string, UserAccount> = {
   'driver@schoolbus.live': {
     id: 'user_driver_01',
     name: 'Ravi Kumar (Bus Driver)',
-    nameTe: 'రవి కుమార్ (బస్సు డ్రైవర్)',
-    email: 'driver@schoolbus.live',
-    phone: '+91 98765 43210',
+    nameTe: 'రవి కుమార్ (బస్సు #07 పైలట్)',
+    email: 'driver@srichaitanya.school',
+    phone: '+91 99510 44469',
     role: 'DRIVER',
     language: 'te',
     status: 'active',
     assignedBusId: 'bus_07',
-    licenseNo: 'DL-09201488219',
+    licenseNo: 'DL-TG09201488219',
   },
   'admin@schoolbus.live': {
     id: 'user_admin_01',
     name: 'Sri Chaitanya Administrator',
-    nameTe: 'శ్రీ చైతన్య రవాణా నిర్వాహకులు',
-    email: 'admin@schoolbus.live',
+    nameTe: 'శ్రీ చైతన్య రవాణా అధికారి',
+    email: 'admin@srichaitanya.school',
     phone: '+91 99510 44459',
     role: 'ADMIN',
-    language: 'en',
+    language: 'te',
     status: 'active',
   },
 };
@@ -62,8 +97,8 @@ class AuthService {
         this.currentUser = null;
       }
     } else {
-      // Default to demo parent account on first open for frictionless preview
-      this.currentUser = DEMO_ACCOUNTS['parent@schoolbus.live'];
+      // Default to official parent account on first open
+      this.currentUser = OFFICIAL_ACCOUNTS['parent@srichaitanya.school'];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.currentUser));
     }
 
@@ -97,14 +132,14 @@ class AuthService {
 
   /**
    * Log in with Email & Password.
-   * Tries real Firebase Auth first if configured, else checks pre-configured demo users.
+   * Checks verified school accounts first, then real Firebase Auth if configured.
    */
   public async login(email: string, pass: string): Promise<UserAccount> {
     const trimmedEmail = email.trim().toLowerCase();
 
-    // 1. Check Demo Accounts First (for seamless development testing)
-    if (DEMO_ACCOUNTS[trimmedEmail]) {
-      this.currentUser = DEMO_ACCOUNTS[trimmedEmail];
+    // 1. Check Official Accounts First
+    if (OFFICIAL_ACCOUNTS[trimmedEmail]) {
+      this.currentUser = OFFICIAL_ACCOUNTS[trimmedEmail];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.currentUser));
       this.notify();
       return this.currentUser;
@@ -123,21 +158,21 @@ class AuthService {
     }
 
     // 3. Fallback for unrecognized email
-    throw new Error('Account not found. Please use a verified school account or demo profile.');
+    throw new Error('Account not found. Please use a verified Sri Chaitanya School account.');
   }
 
   /**
-   * Quick-login for demo mode roles
+   * Quick-login for official school roles
    */
   public quickLoginAsRole(role: UserRole): UserAccount {
-    const demoEmail =
+    const officialEmail =
       role === 'PARENT'
-        ? 'parent@schoolbus.live'
+        ? 'parent@srichaitanya.school'
         : role === 'DRIVER'
-        ? 'driver@schoolbus.live'
-        : 'admin@schoolbus.live';
+        ? 'driver@srichaitanya.school'
+        : 'admin@srichaitanya.school';
 
-    this.currentUser = DEMO_ACCOUNTS[demoEmail];
+    this.currentUser = OFFICIAL_ACCOUNTS[officialEmail];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.currentUser));
     this.notify();
     return this.currentUser;

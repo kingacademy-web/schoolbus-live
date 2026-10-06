@@ -96,7 +96,6 @@ export default function App() {
         onOpenProfile={() => setCurrentTab('profile')}
         onOpenAlerts={() => setCurrentTab('alerts')}
         unreadCount={unreadAlerts}
-        gpsMode={store.gpsMode}
         onLogout={handleLogout}
         onOpenSettings={() => setSettingsModalOpen(true)}
         onOpenStaffLogin={(targetRole) => handleOpenStaffAuth(targetRole)}

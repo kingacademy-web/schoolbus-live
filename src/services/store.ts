@@ -16,7 +16,6 @@ import {
   UserRole,
 } from '../types';
 import {
-  BUS_07_WAYPOINTS,
   INITIAL_BUSES,
   INITIAL_DRIVERS,
   INITIAL_NOTIFICATIONS,
@@ -86,7 +85,6 @@ class AppStore {
   public language: Language = 'en';
   public role: UserRole = 'PARENT';
   public currentUser: UserAccount | null = null;
-  public gpsMode: GPSMode = 'LIVE'; // LIVE or DEMO
 
   // Security Credentials & Staff Auth
   public driverPin: string = '1234';
@@ -125,9 +123,7 @@ class AppStore {
     isRealGps: true,
   };
 
-  public isSimulating: boolean = false;
-  private simStep: number = 1;
-  private simInterval: any = null;
+  public readonly gpsMode: GPSMode = 'LIVE';
 
   public isHardwareGpsActive: boolean = false;
   public gpsError: string | null = null;
@@ -228,10 +224,8 @@ class AppStore {
       this.language = savedLang;
     }
 
-    // Restore GPS Mode preference
-    const savedGpsMode = localStorage.getItem('schoolbus_gps_mode') as GPSMode;
-    if (savedGpsMode === 'LIVE' || savedGpsMode === 'DEMO') {
-      this.gpsMode = savedGpsMode;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('schoolbus_gps_mode');
     }
 
     // Restore security credentials
@@ -329,7 +323,6 @@ class AppStore {
     if (payload.notifications) this.notifications = payload.notifications;
     if (payload.students) this.students = payload.students;
     if (payload.tripElapsedSeconds !== undefined) this.tripElapsedSeconds = payload.tripElapsedSeconds;
-    if (payload.gpsMode) this.gpsMode = payload.gpsMode;
     this.listeners.forEach((fn) => fn());
   }
 
@@ -539,17 +532,8 @@ class AppStore {
     }
   }
 
-  // Mode toggling (LIVE vs DEMO)
-  public setGpsMode(mode: GPSMode) {
-    this.gpsMode = mode;
-    localStorage.setItem('schoolbus_gps_mode', mode);
-    if (mode === 'DEMO') {
-      this.stopHardwareGps();
-    } else {
-      if (this.isSimulating) {
-        this.toggleSimulation(); // stop simulation
-      }
-    }
+  // GPS Engine is permanent LIVE
+  public setGpsMode(_mode?: GPSMode) {
     this.notify();
   }
 
@@ -811,8 +795,6 @@ class AppStore {
     }
 
     this.stopHardwareGps();
-    this.isSimulating = false;
-    if (this.simInterval) clearInterval(this.simInterval);
 
     // Update RTDB liveLocation to parked campus
     if (isFirebaseConfigured && rtdb && this.activeBusId) {
@@ -908,57 +890,8 @@ class AppStore {
     }, 1000);
   }
 
-  // Simulation mode
-  public startSimulation() {
-    this.stopHardwareGps();
-    this.isSimulating = true;
-    if (this.simInterval) clearInterval(this.simInterval);
-
-    this.simInterval = setInterval(() => {
-      this.simStep = (this.simStep + 1) % BUS_07_WAYPOINTS.length;
-      const currentWp = BUS_07_WAYPOINTS[this.simStep];
-      const pickup = this.getPickupPoint();
-
-      let dist = currentWp.distanceKm;
-      if (pickup) {
-        dist = calculateDistanceKm(currentWp.lat, currentWp.lng, pickup.lat, pickup.lng);
-      }
-      const eta = estimateEtaMinutes(dist, currentWp.speed);
-
-      this.liveLocation = {
-        ...this.liveLocation,
-        lat: currentWp.lat,
-        lng: currentWp.lng,
-        speed: currentWp.speed,
-        heading: currentWp.heading,
-        locationName: currentWp.locationName,
-        locationNameTe: currentWp.locationNameTe,
-        distanceKm: dist,
-        etaMinutes: eta,
-        timestamp: Date.now(),
-        isRealGps: false,
-      };
-
-      this.checkGeofenceAlert(dist);
-      this.notify();
-    }, 3500);
-  }
-
-  public toggleSimulation() {
-    if (this.isSimulating) {
-      this.isSimulating = false;
-      if (this.simInterval) clearInterval(this.simInterval);
-      this.notify();
-    } else {
-      this.startSimulation();
-      this.notify();
-    }
-  }
-
   // Real Hardware GPS tracking using Device Navigator Geolocation
   public startHardwareGps() {
-    this.isSimulating = false;
-    if (this.simInterval) clearInterval(this.simInterval);
     this.isHardwareGpsActive = true;
     this.gpsError = null;
 
