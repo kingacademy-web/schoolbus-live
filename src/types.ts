@@ -30,6 +30,18 @@ export type StudentStatus = 'Awaiting Bus' | 'At Stop' | 'Boarded' | 'Dropped Sa
 
 export type PickupStatus = 'Upcoming' | 'Approaching' | 'Arrived' | 'Departed' | 'Completed';
 
+export interface UserRegisteredProfile {
+  role: 'STUDENT' | 'DRIVER';
+  name: string;
+  nameTe?: string;
+  mobile: string;
+  dob?: string;
+  idNumber?: string; // Roll No for student, or Driver License/ID for driver
+  areaVillage?: string; // Area or Village name
+  assignedBusId?: string;
+  registeredAt: number;
+}
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -41,6 +53,10 @@ export interface UserAccount {
   status: 'active' | 'suspended' | 'pending';
   createdAt?: number;
   lastLoginAt?: number;
+  dob?: string;
+  idNumber?: string;
+  areaVillage?: string;
+  registeredOnDevice?: boolean;
   // Parent specific
   linkedStudentIds?: string[];
   selectedChildId?: string;
@@ -64,6 +80,8 @@ export interface Student {
   parentId: string;
   parentPhone: string;
   parentEmail?: string;
+  pickupAddress?: string;
+  areaVillage?: string;
   photoUrl: string;
   status: StudentStatus;
   transitPass: string;

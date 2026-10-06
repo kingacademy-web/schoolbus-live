@@ -14,6 +14,7 @@ import {
   StudentStatus,
   UserAccount,
   UserRole,
+  UserRegisteredProfile,
 } from '../types';
 import {
   INITIAL_BUSES,
@@ -242,6 +243,36 @@ class AppStore {
       this.isStaffAuthenticated = false;
     }
 
+    // Restore user profile from registered device profile if present
+    const regProfile = authService.getRegisteredProfile();
+    if (regProfile) {
+      if (regProfile.role === 'DRIVER') {
+        this.isStaffAuthenticated = true;
+        this.role = 'DRIVER';
+        if (this.drivers.length > 0) {
+          this.drivers[0] = {
+            ...this.drivers[0],
+            name: regProfile.name,
+            nameTe: regProfile.nameTe || regProfile.name,
+            phone: regProfile.mobile,
+            licenseNo: regProfile.idNumber || this.drivers[0].licenseNo,
+          };
+        }
+      } else {
+        this.role = 'PARENT';
+        if (this.students.length > 0) {
+          this.students[0] = {
+            ...this.students[0],
+            name: regProfile.name,
+            nameTe: regProfile.nameTe || regProfile.name,
+            parentPhone: regProfile.mobile,
+            rollNo: regProfile.idNumber || this.students[0].rollNo,
+            pickupAddress: regProfile.areaVillage || this.students[0].pickupAddress,
+          };
+        }
+      }
+    }
+
     // Bind Auth Service (enforce PARENT if not authenticated as staff)
     this.currentUser = authService.getCurrentUser();
     if (this.currentUser) {
@@ -251,7 +282,7 @@ class AppStore {
       } else {
         this.role = this.currentUser.role;
       }
-    } else {
+    } else if (!regProfile) {
       this.role = 'PARENT';
     }
 
@@ -603,6 +634,119 @@ class AppStore {
       localStorage.removeItem('schoolbus_staff_auth');
     }
     this.setRole('PARENT');
+  }
+
+  // Register first-time user profile (Student or Driver)
+  public registerUserProfile(profile: UserRegisteredProfile): UserAccount {
+    const account = authService.registerProfile(profile);
+
+    if (profile.role === 'STUDENT') {
+      if (this.students.length > 0) {
+        this.students[0] = {
+          ...this.students[0],
+          name: profile.name,
+          nameTe: profile.nameTe || profile.name,
+          parentPhone: profile.mobile,
+          rollNo: profile.idNumber || this.students[0].rollNo,
+          pickupAddress: profile.areaVillage || this.students[0].pickupAddress,
+        };
+        this.activeStudentId = this.students[0].id;
+      }
+      if (profile.areaVillage && this.pickupPoints.length > 0) {
+        this.pickupPoints[0] = {
+          ...this.pickupPoints[0],
+          name: `${profile.areaVillage} Stop`,
+          nameTe: `${profile.areaVillage} స్టాప్`,
+          landmark: profile.areaVillage,
+          landmarkTe: profile.areaVillage,
+        };
+      }
+      this.role = 'PARENT';
+      this.isStaffAuthenticated = false;
+      this.saveToStorage();
+      this.syncStudentsToCloud();
+    } else if (profile.role === 'DRIVER') {
+      if (this.drivers.length > 0) {
+        this.drivers[0] = {
+          ...this.drivers[0],
+          name: profile.name,
+          nameTe: profile.nameTe || profile.name,
+          phone: profile.mobile,
+          licenseNo: profile.idNumber || this.drivers[0].licenseNo,
+        };
+      }
+      this.isStaffAuthenticated = true;
+      this.role = 'DRIVER';
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('schoolbus_staff_auth', 'true');
+        localStorage.setItem('schoolbus_role', 'DRIVER');
+      }
+      this.saveToStorage();
+      this.syncDriversToCloud();
+    }
+
+    // Cloud backup to Firebase RTDB if configured
+    if (isFirebaseConfigured && rtdb) {
+      const cleanDigits = profile.mobile.replace(/\D/g, '').slice(-10);
+      try {
+        set(ref(rtdb, `fleet/registeredUsers/${cleanDigits}`), {
+          ...profile,
+          timestamp: Date.now(),
+        });
+      } catch (e) {
+        console.warn('Failed to sync registered user to RTDB:', e);
+      }
+    }
+
+    this.notify();
+    return account;
+  }
+
+  // Quick Mobile-Only Login (Zero password friction)
+  public loginWithMobile(mobile: string): { success: boolean; isDriver: boolean; message?: string } {
+    try {
+      const res = authService.loginWithMobile(mobile);
+      if (res.isDriver) {
+        this.isStaffAuthenticated = true;
+        this.role = 'DRIVER';
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('schoolbus_staff_auth', 'true');
+          localStorage.setItem('schoolbus_role', 'DRIVER');
+        }
+        if (this.drivers.length > 0 && res.user.name) {
+          this.drivers[0] = {
+            ...this.drivers[0],
+            name: res.user.name,
+            nameTe: res.user.nameTe || res.user.name,
+            phone: res.user.phone,
+            licenseNo: res.user.licenseNo || this.drivers[0].licenseNo,
+          };
+          this.saveToStorage();
+        }
+      } else {
+        this.isStaffAuthenticated = false;
+        this.role = 'PARENT';
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('schoolbus_staff_auth');
+          localStorage.setItem('schoolbus_role', 'PARENT');
+        }
+        if (this.students.length > 0 && res.user.name) {
+          this.students[0] = {
+            ...this.students[0],
+            name: res.user.name,
+            nameTe: res.user.nameTe || res.user.name,
+            parentPhone: res.user.phone,
+            rollNo: res.user.idNumber || this.students[0].rollNo,
+            pickupAddress: res.user.areaVillage || this.students[0].pickupAddress,
+          };
+          this.saveToStorage();
+        }
+      }
+      this.notify();
+      return { success: true, isDriver: res.isDriver };
+    } catch (err: any) {
+      return { success: false, isDriver: false, message: err.message };
+    }
   }
 
   // Update Driver Security PIN

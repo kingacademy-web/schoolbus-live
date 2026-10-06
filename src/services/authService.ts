@@ -7,7 +7,7 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { UserAccount, UserRole, Language } from '../types';
+import { UserAccount, UserRole, Language, UserRegisteredProfile } from '../types';
 
 const OFFICIAL_ACCOUNTS: Record<string, UserAccount> = {
   'parent@srichaitanya.school': {
@@ -82,24 +82,53 @@ const OFFICIAL_ACCOUNTS: Record<string, UserAccount> = {
 };
 
 const STORAGE_KEY = 'schoolbus_current_user';
+const REGISTERED_PROFILE_KEY = 'schoolbus_registered_profile';
+const REGISTERED_USERS_KEY = 'schoolbus_registered_users_map';
 
 class AuthService {
   private currentUser: UserAccount | null = null;
   private listeners: Set<(user: UserAccount | null) => void> = new Set();
 
   constructor() {
-    // 1. Restore local session
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        this.currentUser = JSON.parse(saved);
-      } catch {
+    // 1. Restore local session or registered profile
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const regProfile = this.getRegisteredProfile();
+
+      if (saved) {
+        try {
+          this.currentUser = JSON.parse(saved);
+        } catch {
+          this.currentUser = null;
+        }
+      } else if (regProfile) {
+        const isDriver = regProfile.role === 'DRIVER';
+        const cleanMobile = regProfile.mobile.replace(/\D/g, '').slice(-10);
+        this.currentUser = {
+          id: `user_${cleanMobile}`,
+          name: regProfile.name,
+          nameTe: regProfile.nameTe || regProfile.name,
+          email: `${cleanMobile}@srichaitanya.school`,
+          phone: regProfile.mobile,
+          role: isDriver ? 'DRIVER' : 'PARENT',
+          language: 'te',
+          status: 'active',
+          dob: regProfile.dob,
+          idNumber: regProfile.idNumber,
+          areaVillage: regProfile.areaVillage,
+          registeredOnDevice: true,
+          assignedBusId: 'bus_07',
+          licenseNo: isDriver ? regProfile.idNumber || 'DL-TG09201488219' : undefined,
+          lastLoginAt: Date.now(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.currentUser));
+        if (isDriver) {
+          localStorage.setItem('schoolbus_staff_auth', 'true');
+        }
+      } else {
+        // First-time user: not yet registered
         this.currentUser = null;
       }
-    } else {
-      // Default to official parent account on first open
-      this.currentUser = OFFICIAL_ACCOUNTS['parent@srichaitanya.school'];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.currentUser));
     }
 
     // 2. If Firebase is configured, bind auth state listener
@@ -128,6 +157,155 @@ class AuthService {
 
   private notify() {
     this.listeners.forEach((cb) => cb(this.currentUser));
+  }
+
+  public isDeviceRegistered(): boolean {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem(REGISTERED_PROFILE_KEY);
+  }
+
+  public getRegisteredProfile(): UserRegisteredProfile | null {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem(REGISTERED_PROFILE_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  public registerProfile(profile: UserRegisteredProfile): UserAccount {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(REGISTERED_PROFILE_KEY, JSON.stringify(profile));
+    }
+
+    const cleanDigits = profile.mobile.replace(/\D/g, '').slice(-10);
+    const role: UserRole = profile.role === 'DRIVER' ? 'DRIVER' : 'PARENT';
+    const email = `${cleanDigits}@srichaitanya.school`;
+
+    const account: UserAccount = {
+      id: `user_${cleanDigits}`,
+      name: profile.name,
+      nameTe: profile.nameTe || profile.name,
+      email,
+      phone: profile.mobile,
+      role,
+      language: 'te',
+      status: 'active',
+      dob: profile.dob,
+      idNumber: profile.idNumber,
+      areaVillage: profile.areaVillage,
+      registeredOnDevice: true,
+      linkedStudentIds: role === 'PARENT' ? ['std_sadvik'] : undefined,
+      selectedChildId: role === 'PARENT' ? 'std_sadvik' : undefined,
+      assignedBusId: 'bus_07',
+      licenseNo: role === 'DRIVER' ? profile.idNumber || 'DL-TG09201488219' : undefined,
+      lastLoginAt: Date.now(),
+    };
+
+    this.currentUser = account;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(account));
+      if (role === 'DRIVER') {
+        localStorage.setItem('schoolbus_staff_auth', 'true');
+      }
+
+      try {
+        const existingMap = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '{}');
+        existingMap[cleanDigits] = account;
+        localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(existingMap));
+      } catch (e) {
+        console.warn('Error saving to registered users map:', e);
+      }
+    }
+
+    this.notify();
+    return account;
+  }
+
+  /**
+   * Quick-login with Mobile Number without password.
+   * Matches against device registered profile, saved users map, or official accounts.
+   */
+  public loginWithMobile(mobile: string): { user: UserAccount; isDriver: boolean } {
+    const cleanDigits = mobile.replace(/\D/g, '').slice(-10);
+    if (cleanDigits.length < 10) {
+      throw new Error('దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి (Please enter a valid 10-digit mobile number).');
+    }
+
+    // 1. Check if device profile matches
+    const devProfile = this.getRegisteredProfile();
+    if (devProfile) {
+      const devClean = devProfile.mobile.replace(/\D/g, '').slice(-10);
+      if (devClean === cleanDigits) {
+        const isDriver = devProfile.role === 'DRIVER';
+        const account: UserAccount = {
+          id: `user_${cleanDigits}`,
+          name: devProfile.name,
+          nameTe: devProfile.nameTe || devProfile.name,
+          email: `${cleanDigits}@srichaitanya.school`,
+          phone: devProfile.mobile,
+          role: isDriver ? 'DRIVER' : 'PARENT',
+          language: 'te',
+          status: 'active',
+          dob: devProfile.dob,
+          idNumber: devProfile.idNumber,
+          areaVillage: devProfile.areaVillage,
+          registeredOnDevice: true,
+          assignedBusId: 'bus_07',
+          licenseNo: isDriver ? devProfile.idNumber || 'DL-TG09201488219' : undefined,
+          lastLoginAt: Date.now(),
+        };
+        this.currentUser = account;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(account));
+        if (isDriver) {
+          localStorage.setItem('schoolbus_staff_auth', 'true');
+        }
+        this.notify();
+        return { user: account, isDriver };
+      }
+    }
+
+    // 2. Check registered users map
+    if (typeof window !== 'undefined') {
+      try {
+        const existingMap = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '{}');
+        if (existingMap[cleanDigits]) {
+          const account = existingMap[cleanDigits] as UserAccount;
+          const isDriver = account.role === 'DRIVER';
+          this.currentUser = account;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(account));
+          if (isDriver) {
+            localStorage.setItem('schoolbus_staff_auth', 'true');
+          }
+          this.notify();
+          return { user: account, isDriver };
+        }
+      } catch (e) {
+        console.warn('Error reading registered users map:', e);
+      }
+    }
+
+    // 3. Fallback check for known school phones
+    if (cleanDigits === '9951044469' || cleanDigits === '9876543210') {
+      const account = this.quickLoginAsRole('DRIVER');
+      localStorage.setItem('schoolbus_staff_auth', 'true');
+      return { user: account, isDriver: true };
+    }
+    if (cleanDigits === '9951044459' || cleanDigits === '9988776655') {
+      const account = this.quickLoginAsRole('PARENT');
+      return { user: account, isDriver: false };
+    }
+
+    // 4. Auto-register as verified user if new
+    const autoAccount = this.registerProfile({
+      role: 'STUDENT',
+      name: `User ${cleanDigits.slice(-4)}`,
+      mobile: cleanDigits,
+      registeredAt: Date.now(),
+    });
+    return { user: autoAccount, isDriver: false };
   }
 
   /**

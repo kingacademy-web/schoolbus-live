@@ -10,6 +10,8 @@ import {
   Car as SteeringWheel,
   School,
   Delete,
+  Phone,
+  LogIn,
 } from 'lucide-react';
 import { store } from '../services/store';
 import { Language } from '../types';
@@ -18,9 +20,9 @@ import { getTranslation } from '../i18n/translations';
 interface StaffAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialRole?: 'DRIVER' | 'ADMIN';
+  initialRole?: 'DRIVER' | 'ADMIN' | 'MOBILE';
   lang: Language;
-  onSuccess: (role: 'DRIVER' | 'ADMIN') => void;
+  onSuccess: (role: 'DRIVER' | 'ADMIN' | 'PARENT') => void;
 }
 
 export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
@@ -30,7 +32,8 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   lang,
   onSuccess,
 }) => {
-  const [activeTab, setActiveTab] = useState<'DRIVER' | 'ADMIN'>(initialRole);
+  const [activeTab, setActiveTab] = useState<'DRIVER' | 'ADMIN' | 'MOBILE'>(initialRole);
+  const [mobileNumber, setMobileNumber] = useState('');
   const [driverPin, setDriverPin] = useState('');
   const [adminPass, setAdminPass] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +43,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialRole);
+      setMobileNumber('');
       setDriverPin('');
       setAdminPass('');
       setErrorMsg(null);
@@ -127,6 +131,36 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     }
   };
 
+  const handleMobileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = mobileNumber.replace(/\D/g, '');
+    if (clean.length !== 10) {
+      setErrorMsg(
+        lang === 'te'
+          ? 'దయచేసి 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.'
+          : 'Please enter a valid 10-digit mobile number.'
+      );
+      return;
+    }
+
+    const res = store.loginWithMobile(clean);
+    if (res.success) {
+      setSuccess(true);
+      setErrorMsg(null);
+      setTimeout(() => {
+        onSuccess(res.isDriver ? 'DRIVER' : 'PARENT');
+        onClose();
+      }, 500);
+    } else {
+      setErrorMsg(
+        res.message ||
+          (lang === 'te'
+            ? 'ఈ మొబైల్ నంబర్‌తో రికార్డు కనుగొనబడలేదు. దయచేసి సరైన నంబర్ నమోదు చేయండి.'
+            : 'No record found with this mobile number.')
+      );
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-sm w-full shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 border border-[#E2E7FF]">
@@ -138,10 +172,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-[#131B2E]">
-                {getTranslation(lang, 'staffPortalTitle')}
+                {lang === 'te' ? 'పోర్టల్ లాగిన్' : 'Portal Login'}
               </h3>
               <p className="text-[11px] text-[#757682]">
-                {lang === 'te' ? 'రక్షిత సిబ్బంది లాగిన్' : 'Protected Staff Authentication'}
+                {lang === 'te' ? 'మొబైల్ లేదా పిన్ ద్వారా లాగిన్' : 'Login with Mobile or PIN'}
               </p>
             </div>
           </div>
@@ -154,15 +188,31 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Toggle: Driver vs Admin */}
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#F2F3FF] rounded-2xl border border-[#E2E7FF]">
+        {/* Tab Toggle: Mobile vs Driver vs Admin */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-[#F2F3FF] rounded-2xl border border-[#E2E7FF]">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('MOBILE');
+              setErrorMsg(null);
+            }}
+            className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+              activeTab === 'MOBILE'
+                ? 'bg-[#00236F] text-white shadow-xs'
+                : 'text-[#444651] hover:text-[#131B2E]'
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>{lang === 'te' ? 'మొబైల్' : 'Mobile'}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
               setActiveTab('DRIVER');
               setErrorMsg(null);
             }}
-            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+            className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
               activeTab === 'DRIVER'
                 ? 'bg-[#00236F] text-white shadow-xs'
                 : 'text-[#444651] hover:text-[#131B2E]'
@@ -178,14 +228,14 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               setActiveTab('ADMIN');
               setErrorMsg(null);
             }}
-            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+            className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
               activeTab === 'ADMIN'
                 ? 'bg-[#00236F] text-white shadow-xs'
                 : 'text-[#444651] hover:text-[#131B2E]'
             }`}
           >
             <School className="w-3.5 h-3.5" />
-            <span>{lang === 'te' ? 'స్కూల్ అడ్మిన్' : 'Admin Pass'}</span>
+            <span>{lang === 'te' ? 'అడ్మిన్' : 'Admin'}</span>
           </button>
         </div>
 
@@ -207,6 +257,45 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               {getTranslation(lang, 'staffAuthSuccessToast')}
             </span>
           </div>
+        )}
+
+        {/* Tab 0: MOBILE NUMBER QUICK LOGIN */}
+        {activeTab === 'MOBILE' && !success && (
+          <form onSubmit={handleMobileSubmit} className="flex flex-col gap-3">
+            <div className="text-center">
+              <span className="text-xs font-bold text-[#131B2E] block">
+                {lang === 'te' ? 'రిజిస్టర్డ్ మొబైల్ నంబర్ నమోదు చేయండి' : 'Enter Registered Mobile Number'}
+              </span>
+              <span className="text-[11px] text-[#757682]">
+                {lang === 'te'
+                  ? 'నంబర్ ఎంటర్ చేయగానే నేరుగా ఓపెన్ అవుతుంది'
+                  : 'Opens your portal immediately with mobile'}
+              </span>
+            </div>
+
+            <div className="relative mt-1">
+              <input
+                type="tel"
+                autoFocus
+                required
+                maxLength={10}
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+                placeholder="10 అంకెల నంబర్ (ఉదా: 9951044459)"
+                className="w-full bg-[#F2F3FF] border border-[#C5C5D3] rounded-xl pl-9 pr-3.5 py-3 text-sm font-mono font-bold text-[#131B2E] focus:outline-[#00236F]"
+              />
+              <Phone className="w-4 h-4 text-[#757682] absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
+
+            <button
+              type="submit"
+              disabled={mobileNumber.length !== 10}
+              className="w-full mt-1 bg-[#00236F] hover:bg-[#001c59] disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>{lang === 'te' ? 'ఓపెన్ చేయండి' : 'Open Portal'}</span>
+            </button>
+          </form>
         )}
 
         {/* Tab 1: DRIVER PIN LOGIN */}

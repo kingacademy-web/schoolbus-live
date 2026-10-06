@@ -22,7 +22,7 @@ interface HeaderProps {
   unreadCount: number;
   onLogout?: () => void;
   onOpenSettings: () => void;
-  onOpenStaffLogin: (role: 'DRIVER' | 'ADMIN') => void;
+  onOpenStaffLogin: (role: 'DRIVER' | 'ADMIN' | 'MOBILE') => void;
   onEditProfile: () => void;
 }
 
@@ -221,8 +221,28 @@ export const Header: React.FC<HeaderProps> = ({
                 {role === 'PARENT' ? (
                   <>
                     <div className="px-3 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-[#444651]">
-                      {lang === 'te' ? 'స్టాఫ్ లాగిన్ ఎంపికలు' : 'Staff Login Options'}
+                      {lang === 'te' ? 'లాగిన్ ఎంపికలు' : 'Login Options'}
                     </div>
+
+                    {/* Mobile Quick Login Option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        onOpenStaffLogin('MOBILE');
+                      }}
+                      className="w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold hover:bg-[#EAEDFF] text-[#00236F] transition-colors text-left"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#DAE2FD] flex items-center justify-center shrink-0">
+                        <Phone className="w-4 h-4 text-[#00236F]" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span>{lang === 'te' ? '📱 మొబైల్ లాగిన్ (Mobile Login)' : '📱 Mobile Login'}</span>
+                        <span className="text-[10px] font-normal text-[#444651]">
+                          {lang === 'te' ? 'మొబైల్ నంబర్‌తో నేరుగా ఓపెన్' : 'Instant 1-step login'}
+                        </span>
+                      </div>
+                    </button>
 
                     {/* Driver Login Option */}
                     <button

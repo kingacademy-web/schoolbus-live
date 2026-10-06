@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { store } from './services/store';
+import { authService } from './services/authService';
 import { Language, UserRole } from './types';
 import { Header } from './components/Header';
 import { BottomNav, NavTab } from './components/BottomNav';
@@ -11,15 +12,17 @@ import { AlertsView } from './components/AlertsView';
 import { ProfileSettingsView } from './components/ProfileSettingsView';
 import { StaffAuthModal } from './components/StaffAuthModal';
 import { SettingsModal } from './components/SettingsModal';
+import { UserOnboardingModal } from './components/UserOnboardingModal';
 import { AlertTriangle, WifiOff, X } from 'lucide-react';
 
 export default function App() {
   const [, setTick] = useState(0);
-  const [currentTab, setCurrentTab] = useState<NavTab>('home');
+  const [onboardingOpen, setOnboardingOpen] = useState(() => !authService.isDeviceRegistered());
+  const [currentTab, setCurrentTab] = useState<NavTab>(() => (store.role === 'DRIVER' ? 'driver_portal' : 'home'));
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [acknowledgedEmergency, setAcknowledgedEmergency] = useState(false);
   const [staffAuthModalOpen, setStaffAuthModalOpen] = useState(false);
-  const [staffAuthTargetRole, setStaffAuthTargetRole] = useState<'DRIVER' | 'ADMIN'>('DRIVER');
+  const [staffAuthTargetRole, setStaffAuthTargetRole] = useState<'DRIVER' | 'ADMIN' | 'MOBILE'>('DRIVER');
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // Re-render when store updates
@@ -49,16 +52,27 @@ export default function App() {
     (n) => n.type === 'bus_stopped' || (n.titleEn && (n.titleEn.toLowerCase().includes('emergency') || n.titleEn.toLowerCase().includes('sos')))
   );
 
-  const handleOpenStaffAuth = (targetRole: 'DRIVER' | 'ADMIN' = 'DRIVER') => {
+  const handleOpenStaffAuth = (targetRole: 'DRIVER' | 'ADMIN' | 'MOBILE' = 'DRIVER') => {
     setStaffAuthTargetRole(targetRole);
     setStaffAuthModalOpen(true);
   };
 
-  const handleStaffAuthSuccess = (authenticatedRole: 'DRIVER' | 'ADMIN') => {
+  const handleStaffAuthSuccess = (authenticatedRole: 'DRIVER' | 'ADMIN' | 'PARENT') => {
     if (authenticatedRole === 'DRIVER') {
       setCurrentTab('driver_portal');
     } else if (authenticatedRole === 'ADMIN') {
       setCurrentTab('admin_fleet');
+    } else {
+      setCurrentTab('home');
+    }
+  };
+
+  const handleOnboardingSuccess = (registeredRole: 'STUDENT' | 'DRIVER') => {
+    setOnboardingOpen(false);
+    if (registeredRole === 'DRIVER') {
+      setCurrentTab('driver_portal');
+    } else {
+      setCurrentTab('home');
     }
   };
 
@@ -194,6 +208,13 @@ export default function App() {
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
         lang={lang}
+      />
+
+      {/* First-Time User Onboarding & Registration Modal */}
+      <UserOnboardingModal
+        isOpen={onboardingOpen}
+        lang={lang}
+        onSuccess={handleOnboardingSuccess}
       />
     </div>
   );

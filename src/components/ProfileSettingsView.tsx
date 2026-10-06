@@ -25,6 +25,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { store } from '../services/store';
+import { authService } from '../services/authService';
 import { Language, UserRole } from '../types';
 import { getTranslation } from '../i18n/translations';
 
@@ -172,6 +173,58 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Device Registered Profile Details */}
+      {(() => {
+        const reg = authService.getRegisteredProfile();
+        if (!reg) return null;
+        return (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E7FF] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#131B2E] flex items-center gap-1.5">
+                <User className="w-4 h-4 text-[#00236F]" />
+                <span>{lang === 'te' ? 'ఈ ఫోన్‌లో రిజిస్టర్ అయిన వివరాలు' : 'Registered Device Profile'}</span>
+              </span>
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                {reg.role === 'DRIVER'
+                  ? (lang === 'te' ? 'డ్రైవర్' : 'Driver')
+                  : (lang === 'te' ? 'విద్యార్థి / తల్లిదండ్రులు' : 'Student / Parent')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs bg-[#FAF8FF] p-3 rounded-xl border border-[#E2E7FF]">
+              <div>
+                <span className="text-[10px] text-[#757682] block">{lang === 'te' ? 'పేరు' : 'Name'}:</span>
+                <span className="font-bold text-[#131B2E]">{reg.name}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#757682] block">{lang === 'te' ? 'మొబైల్' : 'Mobile'}:</span>
+                <span className="font-bold font-mono text-[#131B2E]">{reg.mobile}</span>
+              </div>
+              {reg.dob && (
+                <div>
+                  <span className="text-[10px] text-[#757682] block">{lang === 'te' ? 'పుట్టిన తేదీ' : 'DOB'}:</span>
+                  <span className="font-semibold text-[#131B2E]">{reg.dob}</span>
+                </div>
+              )}
+              {reg.idNumber && (
+                <div>
+                  <span className="text-[10px] text-[#757682] block">
+                    {reg.role === 'DRIVER' ? (lang === 'te' ? 'లైసెన్స్ / ID' : 'License/ID') : (lang === 'te' ? 'రోల్ నంబర్' : 'Roll No')}:
+                  </span>
+                  <span className="font-bold text-[#131B2E]">{reg.idNumber}</span>
+                </div>
+              )}
+              {reg.areaVillage && (
+                <div className="col-span-2">
+                  <span className="text-[10px] text-[#757682] block">{lang === 'te' ? 'ప్రాంతం / గ్రామం' : 'Area / Village'}:</span>
+                  <span className="font-semibold text-[#131B2E]">{reg.areaVillage}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Child / Student Switcher (For Parents with multiple children) */}
       {role === 'PARENT' && (
